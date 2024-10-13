@@ -1,9 +1,10 @@
 body {
   margin: 0;
   overflow: hidden;
+  background-color: #000; /* Change background to black */
 }
 
 canvas {
   display: block;
-  background-color: #222;
+  background-color: #000; /* Match body background */
 }
