@@ -21,7 +21,7 @@ const player = {
   height: 60,
   speed: 7,
   dx: 0,
-  moving: false // Indicates if the player is moving via touch
+  moving: false
 };
 
 // Game state
@@ -40,14 +40,16 @@ class Obstacle {
     this.rotation = 0;
     this.rotationSpeed = rotationSpeed;
     this.vertices = this.createAsteroidShape();
+    this.craters = this.createCraters();
+    this.spots = this.createSpots();
   }
 
   createAsteroidShape() {
     const points = [];
-    const numVertices = Math.floor(Math.random() * 5) + 5;
+    const numVertices = Math.floor(Math.random() * 5) + 7;
     for (let i = 0; i < numVertices; i++) {
       const angle = (i / numVertices) * Math.PI * 2;
-      const radius = this.size / 2 + Math.random() * this.size / 2;
+      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6);
       points.push({
         x: radius * Math.cos(angle),
         y: radius * Math.sin(angle)
@@ -56,17 +58,42 @@ class Obstacle {
     return points;
   }
 
+  createCraters() {
+    const craters = [];
+    const numCraters = Math.floor(Math.random() * 3) + 2;
+    for (let i = 0; i < numCraters; i++) {
+      const craterX = (Math.random() - 0.5) * this.size * 0.6;
+      const craterY = (Math.random() - 0.5) * this.size * 0.6;
+      const craterRadius = this.size * 0.1 * (0.5 + Math.random() * 0.5);
+      craters.push({ x: craterX, y: craterY, radius: craterRadius });
+    }
+    return craters;
+  }
+
+  createSpots() {
+    const spots = [];
+    const numSpots = Math.floor(Math.random() * 5) + 5;
+    for (let i = 0; i < numSpots; i++) {
+      const spotX = (Math.random() - 0.5) * this.size * 0.8;
+      const spotY = (Math.random() - 0.5) * this.size * 0.8;
+      const spotRadius = this.size * 0.02 * (0.5 + Math.random() * 0.5);
+      spots.push({ x: spotX, y: spotY, radius: spotRadius });
+    }
+    return spots;
+  }
+
   draw() {
     ctx.save();
     ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
     ctx.rotate(this.rotation);
 
     const gradient = ctx.createRadialGradient(
-      0, 0, 0,
-      0, 0, this.size / 2
+      -this.size * 0.2, -this.size * 0.2, this.size * 0.2,
+      0, 0, this.size
     );
-    gradient.addColorStop(0, '#8B8B8B');
-    gradient.addColorStop(1, '#4A4A4A');
+    gradient.addColorStop(0, '#6e6e6e');
+    gradient.addColorStop(0.5, '#5a5a5a');
+    gradient.addColorStop(1, '#3e3e3e');
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -77,8 +104,28 @@ class Obstacle {
     ctx.closePath();
     ctx.fill();
 
+    for (let crater of this.craters) {
+      ctx.beginPath();
+      ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
+      const craterGradient = ctx.createRadialGradient(
+        crater.x - crater.radius * 0.3, crater.y - crater.radius * 0.3, crater.radius * 0.1,
+        crater.x, crater.y, crater.radius
+      );
+      craterGradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+      craterGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = craterGradient;
+      ctx.fill();
+    }
+
+    for (let spot of this.spots) {
+      ctx.beginPath();
+      ctx.arc(spot.x, spot.y, spot.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fill();
+    }
+
     ctx.strokeStyle = '#2C2C2C';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.restore();
@@ -125,7 +172,6 @@ function createStars() {
 function drawPlayer() {
   ctx.save();
 
-  // Main body
   ctx.beginPath();
   ctx.moveTo(player.x, player.y);
   ctx.bezierCurveTo(
@@ -147,7 +193,6 @@ function drawPlayer() {
   ctx.fillStyle = gradient;
   ctx.fill();
 
-  // Windows
   const windowPositions = [0.2, 0.5, 0.8];
   windowPositions.forEach(pos => {
     ctx.beginPath();
@@ -162,11 +207,9 @@ function drawPlayer() {
     ctx.fill();
   });
 
-  // Fins
   const finWidth = player.width * 0.4;
   const finHeight = player.height * 0.3;
 
-  // Left fin
   ctx.beginPath();
   ctx.moveTo(player.x - player.width / 2, player.y + player.height * 0.7);
   ctx.lineTo(player.x - player.width / 2 - finWidth, player.y + player.height);
@@ -175,7 +218,6 @@ function drawPlayer() {
   ctx.fillStyle = '#ff4000';
   ctx.fill();
 
-  // Right fin
   ctx.beginPath();
   ctx.moveTo(player.x + player.width / 2, player.y + player.height * 0.7);
   ctx.lineTo(player.x + player.width / 2 + finWidth, player.y + player.height);
@@ -184,7 +226,6 @@ function drawPlayer() {
   ctx.fillStyle = '#ff4000';
   ctx.fill();
 
-  // Flames
   const flameHeight = 30 + Math.random() * 20;
   const flameWidth = player.width * 0.6;
 
@@ -227,25 +268,27 @@ function updatePlayer() {
 function spawnObstacles() {
   if (gameOver) return;
 
-  const numObstacles = Math.min(1 + Math.floor(score / 10), maxObstacles);
+  const cappedScore = Math.min(score, 32);
+
+  const numObstacles = Math.min(1 + Math.floor(cappedScore / 10), maxObstacles);
 
   for (let i = 0; i < numObstacles; i++) {
-    spawnObstacle();
+    spawnObstacle(cappedScore);
   }
 
-  const spawnDelay = Math.max(300, 1000 - score * 20);
+  const spawnDelay = Math.max(300, 1000 - cappedScore * 20);
 
   setTimeout(spawnObstacles, spawnDelay);
 }
 
-function spawnObstacle() {
+function spawnObstacle(cappedScore) {
   const size = Math.random() * (50 - 30) + 30;
   const x = Math.random() * (canvas.width - size);
   const y = -size;
 
-  const speed = Math.random() * (4 - 2) + 2 + score * 0.1;
+  const speed = Math.random() * (4 - 2) + 2 + cappedScore * 0.1;
 
-  const rotationSpeed = (Math.random() * 0.05 - 0.025) * (1 + score / 50);
+  const rotationSpeed = (Math.random() * 0.05 - 0.025) * (1 + cappedScore / 50);
 
   obstacles.push(new Obstacle(x, y, size, speed, rotationSpeed));
 }
@@ -423,7 +466,6 @@ function startGame() {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 
-  // Add touch event listeners
   canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
   canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
   canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
