@@ -2,11 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dropper Game</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Rocket Game</title>
+  <style>
+    /* Mobile control buttons */
+    .mobile-controls {
+      display: none; /* Hidden by default, will show on mobile devices */
+    }
+
+    /* Style for the left and right buttons */
+    .control-button {
+      position: fixed;
+      bottom: 20px;
+      width: 80px;
+      height: 80px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border: none;
+      border-radius: 40px;
+      color: white;
+      font-size: 36px;
+      line-height: 80px;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+    }
+
+    #leftButton {
+      left: 20px;
+    }
+
+    #rightButton {
+      right: 20px;
+    }
+
+    /* Show buttons only on mobile devices */
+    @media only screen and (max-width: 768px) {
+      .mobile-controls {
+        display: block;
+      }
+    }
+
+    /* Existing canvas styles */
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      display: block;
+    }
+  </style>
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
+
+  <!-- Mobile control buttons -->
+  <div class="mobile-controls">
+    <button id="leftButton" class="control-button">&#8592;</button>
+    <button id="rightButton" class="control-button">&#8594;</button>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
