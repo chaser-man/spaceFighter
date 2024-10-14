@@ -1,7 +1,7 @@
 /* Style for the body */
 body {
   margin: 0;
-  overflow: hidden;
+  overflow: hidden; /* Prevent scrolling */
   background-color: black;
 }
 
@@ -19,14 +19,14 @@ body {
 .control-button {
   position: fixed;
   bottom: 20px;
-  width: 80px;
-  height: 80px;
+  width: 100px; /* Increased from 80px to 100px */
+  height: 100px; /* Increased from 80px to 100px */
   background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent white */
   border: none;
-  border-radius: 40px;
+  border-radius: 50px; /* Adjusted to match the new size */
   color: white;
-  font-size: 36px;
-  line-height: 80px;
+  font-size: 48px; /* Increased from 36px to 48px */
+  line-height: 100px; /* Match the new height */
   text-align: center;
   user-select: none;
   -webkit-user-select: none;
