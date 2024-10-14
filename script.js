@@ -2,21 +2,48 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Set canvas dimensions
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Detect mobile devices
+function isMobileDevice() {
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Set initial scale factor
+let scaleFactor = 1;
+
+// Detect mobile device and adjust scale factor
+if (isMobileDevice()) {
+  scaleFactor = 2;
+}
+
+// Set canvas dimensions with scaling
+canvas.width = window.innerWidth * scaleFactor;
+canvas.height = window.innerHeight * scaleFactor;
+
+// Adjust CSS to maintain physical size
+canvas.style.width = window.innerWidth + 'px';
+canvas.style.height = window.innerHeight + 'px';
+
+// Apply scaling to the context
+ctx.scale(scaleFactor, scaleFactor);
 
 // Handle window resize
 window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  player.y = canvas.height - player.height - 10;
+  canvas.width = window.innerWidth * scaleFactor;
+  canvas.height = window.innerHeight * scaleFactor;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+
+  // Re-apply scaling after resizing
+  ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
+
+  // Adjust player position if needed
+  player.y = (canvas.height / scaleFactor) - 100;
 });
 
 // Player properties
 const player = {
-  x: canvas.width / 2,
-  y: canvas.height - 70,
+  x: (canvas.width / scaleFactor) / 2,
+  y: (canvas.height / scaleFactor) - 100, // Changed from -70 to -100
   width: 40,
   height: 60,
   speed: 7,
@@ -46,10 +73,10 @@ class Obstacle {
 
   createAsteroidShape() {
     const points = [];
-    const numVertices = Math.floor(Math.random() * 5) + 7;
+    const numVertices = Math.floor(Math.random() * 5) + 7; // Between 7 and 11 vertices
     for (let i = 0; i < numVertices; i++) {
       const angle = (i / numVertices) * Math.PI * 2;
-      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6);
+      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6); // Vary radius for irregular shape
       points.push({
         x: radius * Math.cos(angle),
         y: radius * Math.sin(angle)
@@ -60,7 +87,7 @@ class Obstacle {
 
   createCraters() {
     const craters = [];
-    const numCraters = Math.floor(Math.random() * 3) + 2;
+    const numCraters = Math.floor(Math.random() * 3) + 2; // 2 to 4 craters
     for (let i = 0; i < numCraters; i++) {
       const craterX = (Math.random() - 0.5) * this.size * 0.6;
       const craterY = (Math.random() - 0.5) * this.size * 0.6;
@@ -72,7 +99,7 @@ class Obstacle {
 
   createSpots() {
     const spots = [];
-    const numSpots = Math.floor(Math.random() * 5) + 5;
+    const numSpots = Math.floor(Math.random() * 5) + 5; // 5 to 9 spots
     for (let i = 0; i < numSpots; i++) {
       const spotX = (Math.random() - 0.5) * this.size * 0.8;
       const spotY = (Math.random() - 0.5) * this.size * 0.8;
@@ -87,13 +114,14 @@ class Obstacle {
     ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
     ctx.rotate(this.rotation);
 
+    // Create gradient for asteroid to simulate light source
     const gradient = ctx.createRadialGradient(
       -this.size * 0.2, -this.size * 0.2, this.size * 0.2,
       0, 0, this.size
     );
-    gradient.addColorStop(0, '#6e6e6e');
+    gradient.addColorStop(0, '#6e6e6e'); // Lighter area
     gradient.addColorStop(0.5, '#5a5a5a');
-    gradient.addColorStop(1, '#3e3e3e');
+    gradient.addColorStop(1, '#3e3e3e'); // Darker area
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -104,6 +132,7 @@ class Obstacle {
     ctx.closePath();
     ctx.fill();
 
+    // Draw craters
     for (let crater of this.craters) {
       ctx.beginPath();
       ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
@@ -117,6 +146,7 @@ class Obstacle {
       ctx.fill();
     }
 
+    // Add surface spots
     for (let spot of this.spots) {
       ctx.beginPath();
       ctx.arc(spot.x, spot.y, spot.radius, 0, Math.PI * 2);
@@ -139,8 +169,8 @@ class Obstacle {
 
 class Star {
   constructor() {
-    this.x = Math.random() * canvas.width;
-    this.y = Math.random() * canvas.height;
+    this.x = Math.random() * canvas.width / scaleFactor;
+    this.y = Math.random() * canvas.height / scaleFactor;
     this.size = Math.random() * 2;
     this.speed = Math.random() * 0.5 + 0.5;
     this.twinkle = Math.random() * 5 + 5;
@@ -148,9 +178,9 @@ class Star {
 
   update() {
     this.y += this.speed;
-    if (this.y > canvas.height) {
+    if (this.y > canvas.height / scaleFactor) {
       this.y = 0;
-      this.x = Math.random() * canvas.width;
+      this.x = Math.random() * canvas.width / scaleFactor;
     }
   }
 
@@ -172,6 +202,7 @@ function createStars() {
 function drawPlayer() {
   ctx.save();
 
+  // Main body
   ctx.beginPath();
   ctx.moveTo(player.x, player.y);
   ctx.bezierCurveTo(
@@ -193,6 +224,7 @@ function drawPlayer() {
   ctx.fillStyle = gradient;
   ctx.fill();
 
+  // Windows
   const windowPositions = [0.2, 0.5, 0.8];
   windowPositions.forEach(pos => {
     ctx.beginPath();
@@ -207,9 +239,11 @@ function drawPlayer() {
     ctx.fill();
   });
 
+  // Fins
   const finWidth = player.width * 0.4;
   const finHeight = player.height * 0.3;
 
+  // Left fin
   ctx.beginPath();
   ctx.moveTo(player.x - player.width / 2, player.y + player.height * 0.7);
   ctx.lineTo(player.x - player.width / 2 - finWidth, player.y + player.height);
@@ -218,6 +252,7 @@ function drawPlayer() {
   ctx.fillStyle = '#ff4000';
   ctx.fill();
 
+  // Right fin
   ctx.beginPath();
   ctx.moveTo(player.x + player.width / 2, player.y + player.height * 0.7);
   ctx.lineTo(player.x + player.width / 2 + finWidth, player.y + player.height);
@@ -226,6 +261,7 @@ function drawPlayer() {
   ctx.fillStyle = '#ff4000';
   ctx.fill();
 
+  // Flames
   const flameHeight = 30 + Math.random() * 20;
   const flameWidth = player.width * 0.6;
 
@@ -260,8 +296,8 @@ function updatePlayer() {
   if (leftBoundary < 0) {
     player.x = player.width / 2 + finWidth;
   }
-  if (rightBoundary > canvas.width) {
-    player.x = canvas.width - player.width / 2 - finWidth;
+  if (rightBoundary > canvas.width / scaleFactor) {
+    player.x = (canvas.width / scaleFactor) - player.width / 2 - finWidth;
   }
 }
 
@@ -283,7 +319,7 @@ function spawnObstacles() {
 
 function spawnObstacle(cappedScore) {
   const size = Math.random() * (50 - 30) + 30;
-  const x = Math.random() * (canvas.width - size);
+  const x = Math.random() * ((canvas.width / scaleFactor) - size);
   const y = -size;
 
   const speed = Math.random() * (4 - 2) + 2 + cappedScore * 0.1;
@@ -338,7 +374,7 @@ function detectCollision(player, obstacle) {
 function gameLoop() {
   if (gameOver) return;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width / scaleFactor, canvas.height / scaleFactor);
 
   stars.forEach(star => {
     star.update();
@@ -352,7 +388,7 @@ function gameLoop() {
     obstacle.update();
     obstacle.draw();
 
-    if (obstacle.y - obstacle.size > canvas.height) {
+    if (obstacle.y - obstacle.size > canvas.height / scaleFactor) {
       return false;
     }
 
@@ -396,7 +432,7 @@ function handleTouchStart(e) {
   player.moving = true;
   const touch = e.touches[0];
   const rect = canvas.getBoundingClientRect();
-  const touchX = touch.clientX - rect.left;
+  const touchX = (touch.clientX - rect.left) * scaleFactor;
   player.x = touchX;
 }
 
@@ -405,7 +441,7 @@ function handleTouchMove(e) {
   if (player.moving) {
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    const touchX = touch.clientX - rect.left;
+    const touchX = (touch.clientX - rect.left) * scaleFactor;
     player.x = touchX;
   }
 }
