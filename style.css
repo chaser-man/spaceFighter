@@ -19,14 +19,14 @@ body {
 .control-button {
   position: fixed;
   bottom: 20px;
-  width: 100px; /* Increased from 80px to 100px */
-  height: 100px; /* Increased from 80px to 100px */
+  width: 100px; /* Increased size */
+  height: 100px;
   background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent white */
   border: none;
-  border-radius: 50px; /* Adjusted to match the new size */
+  border-radius: 50px;
   color: white;
-  font-size: 48px; /* Increased from 36px to 48px */
-  line-height: 100px; /* Match the new height */
+  font-size: 48px; /* Increased font size */
+  line-height: 100px;
   text-align: center;
   user-select: none;
   -webkit-user-select: none;
