@@ -7,43 +7,38 @@ function isMobileDevice() {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Set initial scale factor and size multiplier
-let scaleFactor = 1;
+// Set scale factor and size multiplier to 1 for all devices
+let scaleFactor = 0.5;
 let sizeMultiplier = 1;
 
-if (isMobileDevice()) {
-  scaleFactor = 2;
-  sizeMultiplier = 2;
-}
-
-// Set canvas dimensions with scaling
-canvas.width = window.innerWidth * scaleFactor;
-canvas.height = window.innerHeight * scaleFactor;
+// Set canvas dimensions without scaling
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 // Adjust CSS to maintain physical size
 canvas.style.width = window.innerWidth + 'px';
 canvas.style.height = window.innerHeight + 'px';
 
-// Apply scaling to the context
-ctx.scale(scaleFactor, scaleFactor);
+// No need to scale the context since scaleFactor is 1
+// ctx.scale(scaleFactor, scaleFactor);
 
 // Define max difficulty score
 const maxDifficultyScore = 35;
 
 // Handle window resize
 window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth * scaleFactor;
-  canvas.height = window.innerHeight * scaleFactor;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   canvas.style.width = window.innerWidth + 'px';
   canvas.style.height = window.innerHeight + 'px';
-  ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
-  player.y = (canvas.height / scaleFactor) - 100 * sizeMultiplier;
+  // ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
+  player.y = canvas.height - 100 * sizeMultiplier;
 });
 
 // Player properties
 const player = {
-  x: (canvas.width / scaleFactor) / 2,
-  y: (canvas.height / scaleFactor) - 100 * sizeMultiplier,
+  x: canvas.width / 2,
+  y: canvas.height - 100 * sizeMultiplier, // Changed from -70 to -100 and adjusted for sizeMultiplier
   width: 40 * sizeMultiplier,
   height: 60 * sizeMultiplier,
   speed: 7,
@@ -62,7 +57,7 @@ class Obstacle {
   constructor(x, y, size, speed, rotationSpeed) {
     this.x = x;
     this.y = y;
-    this.size = size;
+    this.size = size; // Size adjusted by sizeMultiplier in spawnObstacle()
     this.speed = speed;
     this.rotation = 0;
     this.rotationSpeed = rotationSpeed;
@@ -73,10 +68,10 @@ class Obstacle {
 
   createAsteroidShape() {
     const points = [];
-    const numVertices = Math.floor(Math.random() * 5) + 7;
+    const numVertices = Math.floor(Math.random() * 5) + 7; // Between 7 and 11 vertices
     for (let i = 0; i < numVertices; i++) {
       const angle = (i / numVertices) * Math.PI * 2;
-      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6);
+      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6); // Vary radius for irregular shape
       points.push({
         x: radius * Math.cos(angle),
         y: radius * Math.sin(angle)
@@ -87,7 +82,7 @@ class Obstacle {
 
   createCraters() {
     const craters = [];
-    const numCraters = Math.floor(Math.random() * 3) + 2;
+    const numCraters = Math.floor(Math.random() * 3) + 2; // 2 to 4 craters
     for (let i = 0; i < numCraters; i++) {
       const craterX = (Math.random() - 0.5) * this.size * 0.6;
       const craterY = (Math.random() - 0.5) * this.size * 0.6;
@@ -99,7 +94,7 @@ class Obstacle {
 
   createSpots() {
     const spots = [];
-    const numSpots = Math.floor(Math.random() * 5) + 5;
+    const numSpots = Math.floor(Math.random() * 5) + 5; // 5 to 9 spots
     for (let i = 0; i < numSpots; i++) {
       const spotX = (Math.random() - 0.5) * this.size * 0.8;
       const spotY = (Math.random() - 0.5) * this.size * 0.8;
@@ -114,13 +109,14 @@ class Obstacle {
     ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
     ctx.rotate(this.rotation);
 
+    // Create gradient for asteroid to simulate light source
     const gradient = ctx.createRadialGradient(
       -this.size * 0.2, -this.size * 0.2, this.size * 0.2,
       0, 0, this.size
     );
-    gradient.addColorStop(0, '#6e6e6e');
+    gradient.addColorStop(0, '#6e6e6e'); // Lighter area
     gradient.addColorStop(0.5, '#5a5a5a');
-    gradient.addColorStop(1, '#3e3e3e');
+    gradient.addColorStop(1, '#3e3e3e'); // Darker area
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -131,6 +127,7 @@ class Obstacle {
     ctx.closePath();
     ctx.fill();
 
+    // Draw craters
     for (let crater of this.craters) {
       ctx.beginPath();
       ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
@@ -144,6 +141,7 @@ class Obstacle {
       ctx.fill();
     }
 
+    // Add surface spots
     for (let spot of this.spots) {
       ctx.beginPath();
       ctx.arc(spot.x, spot.y, spot.radius, 0, Math.PI * 2);
@@ -166,8 +164,8 @@ class Obstacle {
 
 class Star {
   constructor() {
-    this.x = Math.random() * canvas.width / scaleFactor;
-    this.y = Math.random() * canvas.height / scaleFactor;
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
     this.size = Math.random() * 2;
     this.speed = Math.random() * 0.5 + 0.5;
     this.twinkle = Math.random() * 5 + 5;
@@ -175,9 +173,9 @@ class Star {
 
   update() {
     this.y += this.speed;
-    if (this.y > canvas.height / scaleFactor) {
+    if (this.y > canvas.height) {
       this.y = 0;
-      this.x = Math.random() * canvas.width / scaleFactor;
+      this.x = Math.random() * canvas.width;
     }
   }
 
@@ -199,6 +197,7 @@ function createStars() {
 function drawPlayer() {
   ctx.save();
 
+  // Main body
   ctx.beginPath();
   ctx.moveTo(player.x, player.y);
   ctx.bezierCurveTo(
@@ -220,10 +219,11 @@ function drawPlayer() {
   ctx.fillStyle = gradient;
   ctx.fill();
 
+  // Windows
   const windowPositions = [0.2, 0.5, 0.8];
   windowPositions.forEach(pos => {
     ctx.beginPath();
-    ctx.arc(player.x, player.y + player.height * pos, player.width / 6, 0, Math.PI * 2);
+    ctx.arc(player.x, player.y + player.height * pos, (player.width / 6), 0, Math.PI * 2);
     const windowGradient = ctx.createRadialGradient(
       player.x, player.y + player.height * pos, 0,
       player.x, player.y + player.height * pos, player.width / 6
@@ -234,7 +234,9 @@ function drawPlayer() {
     ctx.fill();
   });
 
+  // Fins
   const finWidth = player.width * 0.4;
+  const finHeight = player.height * 0.3;
 
   // Left fin
   ctx.beginPath();
@@ -289,8 +291,8 @@ function updatePlayer() {
   if (leftBoundary < 0) {
     player.x = player.width / 2 + finWidth;
   }
-  if (rightBoundary > canvas.width / scaleFactor) {
-    player.x = (canvas.width / scaleFactor) - player.width / 2 - finWidth;
+  if (rightBoundary > canvas.width) {
+    player.x = canvas.width - player.width / 2 - finWidth;
   }
 }
 
@@ -312,7 +314,7 @@ function spawnObstacles() {
 
 function spawnObstacle(cappedScore) {
   const size = (Math.random() * (50 - 30) + 30) * sizeMultiplier;
-  const x = Math.random() * ((canvas.width / scaleFactor) - size);
+  const x = Math.random() * (canvas.width - size);
   const y = -size;
 
   const speed = Math.random() * (4 - 2) + 2 + cappedScore * 0.1;
@@ -369,10 +371,7 @@ function gameLoop() {
 
   // Fill the background with black
   ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, canvas.width / scaleFactor, canvas.height / scaleFactor);
-
-  // Comment out or remove the clearRect line if present
-  // ctx.clearRect(0, 0, canvas.width / scaleFactor, canvas.height / scaleFactor);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   stars.forEach(star => {
     star.update();
@@ -386,7 +385,7 @@ function gameLoop() {
     obstacle.update();
     obstacle.draw();
 
-    if (obstacle.y - obstacle.size > canvas.height / scaleFactor) {
+    if (obstacle.y - obstacle.size > canvas.height) {
       return false;
     }
 
@@ -405,7 +404,6 @@ function gameLoop() {
 
   requestAnimationFrame(gameLoop);
 }
-
 
 function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
