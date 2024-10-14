@@ -10,9 +10,13 @@ function isMobileDevice() {
 // Set initial scale factor
 let scaleFactor = 1;
 
-// Detect mobile device and adjust scale factor
+// Set initial size multiplier
+let sizeMultiplier = 1;
+
+// Detect mobile device and adjust scale factor and size multiplier
 if (isMobileDevice()) {
   scaleFactor = 2;
+  sizeMultiplier = 2; // Make sizes twice as big on mobile
 }
 
 // Set canvas dimensions with scaling
@@ -26,6 +30,9 @@ canvas.style.height = window.innerHeight + 'px';
 // Apply scaling to the context
 ctx.scale(scaleFactor, scaleFactor);
 
+// Define max difficulty score
+const maxDifficultyScore = 35; // Adjusted difficulty cap to 35
+
 // Handle window resize
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth * scaleFactor;
@@ -37,15 +44,15 @@ window.addEventListener('resize', () => {
   ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
 
   // Adjust player position if needed
-  player.y = (canvas.height / scaleFactor) - 100;
+  player.y = (canvas.height / scaleFactor) - 100 * sizeMultiplier;
 });
 
 // Player properties
 const player = {
   x: (canvas.width / scaleFactor) / 2,
-  y: (canvas.height / scaleFactor) - 100, // Changed from -70 to -100
-  width: 40,
-  height: 60,
+  y: (canvas.height / scaleFactor) - 100 * sizeMultiplier, // Changed from -70 to -100 and adjusted for sizeMultiplier
+  width: 40 * sizeMultiplier,
+  height: 60 * sizeMultiplier,
   speed: 7,
   dx: 0,
   moving: false
@@ -62,7 +69,7 @@ class Obstacle {
   constructor(x, y, size, speed, rotationSpeed) {
     this.x = x;
     this.y = y;
-    this.size = size;
+    this.size = size; // Size adjusted by sizeMultiplier in spawnObstacle()
     this.speed = speed;
     this.rotation = 0;
     this.rotationSpeed = rotationSpeed;
@@ -228,7 +235,7 @@ function drawPlayer() {
   const windowPositions = [0.2, 0.5, 0.8];
   windowPositions.forEach(pos => {
     ctx.beginPath();
-    ctx.arc(player.x, player.y + player.height * pos, player.width / 6, 0, Math.PI * 2);
+    ctx.arc(player.x, player.y + player.height * pos, (player.width / 6), 0, Math.PI * 2);
     const windowGradient = ctx.createRadialGradient(
       player.x, player.y + player.height * pos, 0,
       player.x, player.y + player.height * pos, player.width / 6
@@ -262,7 +269,7 @@ function drawPlayer() {
   ctx.fill();
 
   // Flames
-  const flameHeight = 30 + Math.random() * 20;
+  const flameHeight = (30 + Math.random() * 20) * sizeMultiplier;
   const flameWidth = player.width * 0.6;
 
   const flameGradient = ctx.createLinearGradient(
@@ -304,7 +311,8 @@ function updatePlayer() {
 function spawnObstacles() {
   if (gameOver) return;
 
-  const cappedScore = Math.min(score, 32);
+  // Use the maxDifficultyScore constant
+  const cappedScore = Math.min(score, maxDifficultyScore);
 
   const numObstacles = Math.min(1 + Math.floor(cappedScore / 10), maxObstacles);
 
@@ -318,7 +326,7 @@ function spawnObstacles() {
 }
 
 function spawnObstacle(cappedScore) {
-  const size = Math.random() * (50 - 30) + 30;
+  const size = (Math.random() * (50 - 30) + 30) * sizeMultiplier;
   const x = Math.random() * ((canvas.width / scaleFactor) - size);
   const y = -size;
 
