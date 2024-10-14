@@ -10,52 +10,65 @@ canvas.height = window.innerHeight;
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  // Keep the player at the bottom after resizing
   player.y = canvas.height - player.height - 10;
 });
 
 // Player properties
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 70, // Adjusted to accommodate the new player height
+  y: canvas.height - 70,
   width: 40,
   height: 60,
   speed: 7,
-  dx: 0
+  dx: 0,
+  moving: false // Indicates if the player is moving via touch
 };
 
-// Maximum number of obstacles that can be spawned at once
+// Game state
+let score = 0;
+let gameOver = false;
+let obstacles = [];
+let stars = [];
 const maxObstacles = 5;
 
-// Obstacle class
 class Obstacle {
-  constructor(x, y, size, speed) {
+  constructor(x, y, size, speed, rotationSpeed) {
     this.x = x;
-    this.y = y; // Start at or above the top of the canvas
+    this.y = y;
     this.size = size;
     this.speed = speed;
+    this.rotation = 0;
+    this.rotationSpeed = rotationSpeed;
     this.vertices = this.createAsteroidShape();
   }
 
-  // Create an irregular shape for the asteroid
   createAsteroidShape() {
     const points = [];
-    const numVertices = Math.floor(Math.random() * 5) + 5; // Between 5 and 10 vertices
+    const numVertices = Math.floor(Math.random() * 5) + 5;
     for (let i = 0; i < numVertices; i++) {
       const angle = (i / numVertices) * Math.PI * 2;
       const radius = this.size / 2 + Math.random() * this.size / 2;
       points.push({
-        x: this.x + this.size / 2 + radius * Math.cos(angle),
-        y: this.y + this.size / 2 + radius * Math.sin(angle)
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle)
       });
     }
     return points;
   }
 
-  // Draw asteroid
   draw() {
     ctx.save();
-    ctx.fillStyle = '#888'; // Gray color for asteroid
+    ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
+    ctx.rotate(this.rotation);
+
+    const gradient = ctx.createRadialGradient(
+      0, 0, 0,
+      0, 0, this.size / 2
+    );
+    gradient.addColorStop(0, '#8B8B8B');
+    gradient.addColorStop(1, '#4A4A4A');
+
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
     for (let point of this.vertices) {
@@ -63,95 +76,52 @@ class Obstacle {
     }
     ctx.closePath();
     ctx.fill();
+
+    ctx.strokeStyle = '#2C2C2C';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     ctx.restore();
   }
 
-  // Update asteroid position
   update() {
-    this.y += this.speed; // Move downwards
-    // Update vertices positions
-    this.vertices.forEach(point => {
-      point.y += this.speed;
-    });
+    this.y += this.speed;
+    this.rotation += this.rotationSpeed;
   }
 }
 
-// Obstacle array
-let obstacles = [];
+class Star {
+  constructor() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.size = Math.random() * 2;
+    this.speed = Math.random() * 0.5 + 0.5;
+    this.twinkle = Math.random() * 5 + 5;
+  }
 
-// Score and game state
-let score = 0;
-let gameOver = false;
+  update() {
+    this.y += this.speed;
+    if (this.y > canvas.height) {
+      this.y = 0;
+      this.x = Math.random() * canvas.width;
+    }
+  }
 
-// Background stars
-let stars = [];
+  draw() {
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = Math.abs(Math.sin(Date.now() / 1000 * this.twinkle));
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+    ctx.globalAlpha = 1;
+  }
+}
 
-// Create stars for the background
 function createStars() {
   stars = [];
   for (let i = 0; i < 200; i++) {
-    stars.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      size: Math.random() * 2,
-      speed: Math.random() * 0.5 + 0.5,
-      twinkle: Math.random() * 5 + 5
-    });
+    stars.push(new Star());
   }
 }
 
-// Update and draw stars
-function updateStars() {
-  stars.forEach(star => {
-    star.y += star.speed;
-    if (star.y > canvas.height) {
-      star.y = 0;
-      star.x = Math.random() * canvas.width;
-    }
-  });
-}
-
-function drawStars() {
-  ctx.fillStyle = '#fff';
-  stars.forEach(star => {
-    ctx.globalAlpha = Math.abs(Math.sin(Date.now() / 1000 * star.twinkle));
-    ctx.fillRect(star.x, star.y, star.size, star.size);
-  });
-  ctx.globalAlpha = 1; // Reset alpha
-}
-
-// Spawn obstacles with variable delay and quantity
-function spawnObstacleWithDelay() {
-  if (gameOver) return; // Stop spawning if the game is over
-
-  // Calculate the number of obstacles to spawn based on score
-  const numObstacles = Math.min(1 + Math.floor(score / 10), maxObstacles);
-
-  // Spawn multiple obstacles
-  for (let i = 0; i < numObstacles; i++) {
-    spawnObstacle();
-  }
-
-  // Calculate the next obstacle delay based on score
-  const delay = Math.max(300, 1000 - score * 20);
-
-  // Schedule the next obstacle spawn
-  setTimeout(spawnObstacleWithDelay, delay);
-}
-
-// Spawn a single obstacle
-function spawnObstacle() {
-  const size = Math.random() * (50 - 30) + 30; // Asteroid size between 30 and 50
-  const x = Math.random() * (canvas.width - size);
-  const y = -size; // Start above the canvas
-
-  // Increase obstacle speed more aggressively as score increases
-  const speed = Math.random() * (4 - 2) + 2 + score * 0.1;
-
-  obstacles.push(new Obstacle(x, y, size, speed));
-}
-
-// Draw the player as a rocket ship
 function drawPlayer() {
   ctx.save();
 
@@ -238,13 +208,11 @@ function drawPlayer() {
   ctx.restore();
 }
 
-// Update player position
 function updatePlayer() {
   player.x += player.dx;
 
   const finWidth = player.width * 0.4;
 
-  // Prevent player from going off-screen
   const leftBoundary = player.x - player.width / 2 - finWidth;
   const rightBoundary = player.x + player.width / 2 + finWidth;
 
@@ -256,30 +224,33 @@ function updatePlayer() {
   }
 }
 
-// Update and draw obstacles
-function updateObstacles() {
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    const obstacle = obstacles[i];
-    obstacle.update();
-    obstacle.draw();
+function spawnObstacles() {
+  if (gameOver) return;
 
-    // Remove obstacles that are off-screen
-    if (obstacle.y - obstacle.size > canvas.height) {
-      obstacles.splice(i, 1);
-      continue;
-    }
+  const numObstacles = Math.min(1 + Math.floor(score / 10), maxObstacles);
 
-    // Check for collision with player
-    if (detectCollision(player, obstacle)) {
-      gameOver = true;
-      break;
-    }
+  for (let i = 0; i < numObstacles; i++) {
+    spawnObstacle();
   }
+
+  const spawnDelay = Math.max(300, 1000 - score * 20);
+
+  setTimeout(spawnObstacles, spawnDelay);
 }
 
-// Collision detection functions
+function spawnObstacle() {
+  const size = Math.random() * (50 - 30) + 30;
+  const x = Math.random() * (canvas.width - size);
+  const y = -size;
+
+  const speed = Math.random() * (4 - 2) + 2 + score * 0.1;
+
+  const rotationSpeed = (Math.random() * 0.05 - 0.025) * (1 + score / 50);
+
+  obstacles.push(new Obstacle(x, y, size, speed, rotationSpeed));
+}
+
 function detectCollision(player, obstacle) {
-  // Get obstacle bounding box
   const obstacleBox = {
     x: obstacle.x,
     y: obstacle.y,
@@ -287,100 +258,78 @@ function detectCollision(player, obstacle) {
     height: obstacle.size
   };
 
-  // Get player hitboxes
-  const playerHitboxes = getPlayerHitboxes();
+  const playerHitboxes = [
+    {
+      x: player.x - player.width / 2,
+      y: player.y,
+      width: player.width,
+      height: player.height
+    },
+    {
+      x: player.x - player.width / 2 - player.width * 0.4,
+      y: player.y + player.height * 0.7,
+      width: player.width * 0.4,
+      height: player.height * 0.3
+    },
+    {
+      x: player.x + player.width / 2,
+      y: player.y + player.height * 0.7,
+      width: player.width * 0.4,
+      height: player.height * 0.3
+    }
+  ];
 
-  // Check for collision with each hitbox
   for (let hitbox of playerHitboxes) {
-    if (rectIntersect(hitbox, obstacleBox)) {
-      return true; // Collision detected
+    if (
+      hitbox.x < obstacleBox.x + obstacleBox.width &&
+      hitbox.x + hitbox.width > obstacleBox.x &&
+      hitbox.y < obstacleBox.y + obstacleBox.height &&
+      hitbox.y + hitbox.height > obstacleBox.y
+    ) {
+      return true;
     }
   }
-  return false; // No collision
+  return false;
 }
 
-function getPlayerHitboxes() {
-  const finWidth = player.width * 0.4;
-  const finHeight = player.height * 0.3;
-
-  // Main body hitbox
-  const mainBodyHitbox = {
-    x: player.x - player.width / 2,
-    y: player.y,
-    width: player.width,
-    height: player.height
-  };
-
-  // Left fin hitbox
-  const leftFinHitbox = {
-    x: player.x - player.width / 2 - finWidth,
-    y: player.y + player.height * 0.7,
-    width: finWidth,
-    height: finHeight
-  };
-
-  // Right fin hitbox
-  const rightFinHitbox = {
-    x: player.x + player.width / 2,
-    y: player.y + player.height * 0.7,
-    width: finWidth,
-    height: finHeight
-  };
-
-  return [mainBodyHitbox, leftFinHitbox, rightFinHitbox];
-}
-
-function rectIntersect(rect1, rect2) {
-  return !(
-    rect1.x > rect2.x + rect2.width ||
-    rect1.x + rect1.width < rect2.x ||
-    rect1.y > rect2.y + rect2.height ||
-    rect1.y + rect1.height < rect2.y
-  );
-}
-
-// Update the score display
-function updateScore() {
-  ctx.fillStyle = '#fff';
-  ctx.font = '20px Arial';
-  ctx.fillText('Score: ' + score, 10, 30);
-}
-
-// Game over handler
-function gameOverHandler() {
-  alert('Game Over! Your score: ' + score);
-  location.reload();
-}
-
-// Game loop
 function gameLoop() {
-  if (gameOver) {
-    gameOverHandler();
-    return;
-  }
+  if (gameOver) return;
 
-  // Clear the canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw background stars
-  updateStars();
-  drawStars();
+  stars.forEach(star => {
+    star.update();
+    star.draw();
+  });
 
-  // Update and draw player
   updatePlayer();
   drawPlayer();
 
-  // Update and draw obstacles
-  updateObstacles();
+  obstacles = obstacles.filter(obstacle => {
+    obstacle.update();
+    obstacle.draw();
 
-  // Update score display
-  updateScore();
+    if (obstacle.y - obstacle.size > canvas.height) {
+      return false;
+    }
+
+    if (detectCollision(player, obstacle)) {
+      gameOver = true;
+      showGameOver();
+      return false;
+    }
+
+    return true;
+  });
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px Arial';
+  ctx.fillText('Score: ' + score, 10, 30);
 
   requestAnimationFrame(gameLoop);
 }
 
-// Handle keyboard input
-function keyDown(e) {
+function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
     player.dx = player.speed;
   } else if (e.key === 'ArrowLeft' || e.key === 'a') {
@@ -388,7 +337,7 @@ function keyDown(e) {
   }
 }
 
-function keyUp(e) {
+function handleKeyUp(e) {
   if (
     e.key === 'ArrowRight' ||
     e.key === 'd' ||
@@ -399,22 +348,85 @@ function keyUp(e) {
   }
 }
 
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
+function handleTouchStart(e) {
+  e.preventDefault();
+  player.moving = true;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const touchX = touch.clientX - rect.left;
+  player.x = touchX;
+}
 
-// Start the game
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (player.moving) {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    player.x = touchX;
+  }
+}
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  player.moving = false;
+}
+
+function showGameOver() {
+  const gameOverDiv = document.createElement('div');
+  gameOverDiv.style.position = 'absolute';
+  gameOverDiv.style.top = '50%';
+  gameOverDiv.style.left = '50%';
+  gameOverDiv.style.transform = 'translate(-50%, -50%)';
+  gameOverDiv.style.backgroundColor = 'white';
+  gameOverDiv.style.padding = '20px';
+  gameOverDiv.style.borderRadius = '10px';
+  gameOverDiv.style.textAlign = 'center';
+  gameOverDiv.style.color = 'black';
+
+  gameOverDiv.innerHTML = `
+    <h2 style="font-size: 24px; margin-bottom: 10px;">Game Over</h2>
+    <p style="font-size: 18px; margin-bottom: 20px;">Your score: ${score}</p>
+    <button id="playAgain" style="
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    ">Play Again</button>
+  `;
+
+  document.body.appendChild(gameOverDiv);
+
+  const playAgainButton = document.getElementById('playAgain');
+  playAgainButton.addEventListener('click', () => {
+    location.reload();
+  });
+}
+
 function startGame() {
   createStars();
 
-  // Start spawning obstacles
-  spawnObstacleWithDelay();
+  spawnObstacles();
 
-  // Increase score every second
-  setInterval(() => {
+  const scoreInterval = setInterval(() => {
     if (!gameOver) {
       score++;
+    } else {
+      clearInterval(scoreInterval);
     }
   }, 1000);
+
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  // Add touch event listeners
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
   gameLoop();
 }
