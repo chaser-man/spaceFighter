@@ -8,8 +8,8 @@ function isMobileDevice() {
 }
 
 // Set scale factor and size multiplier to 1 for all devices
-let scaleFactor = 0.5;
-let sizeMultiplier = 1;
+let scaleFactor = 1;
+let sizeMultiplier = 0.5;
 
 // Set canvas dimensions without scaling
 canvas.width = window.innerWidth;
