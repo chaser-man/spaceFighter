@@ -3,11 +3,13 @@ body {
   margin: 0;
   overflow: hidden; /* Prevent scrolling */
   background-color: black;
+  touch-action: none; /* Prevent touch gestures like zooming */
 }
 
 /* Style for the game canvas */
 #gameCanvas {
   display: block;
+  touch-action: none; /* Prevent touch gestures on the canvas */
 }
 
 /* Mobile control buttons container */
@@ -17,28 +19,7 @@ body {
 
 /* Style for the left and right control buttons */
 .control-button {
-  position: fixed;
-  bottom: 20px;
-  width: 100px; /* Increased size */
-  height: 100px;
-  background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent white */
-  border: none;
-  border-radius: 50px;
-  color: white;
-  font-size: 48px; /* Increased font size */
-  line-height: 100px;
-  text-align: center;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-}
-
-#leftButton {
-  left: 20px;
-}
-
-#rightButton {
-  right: 20px;
+  /* Your existing styles */
 }
 
 /* Show buttons on mobile devices */
@@ -50,5 +31,5 @@ body {
 
 /* Optional: Visual feedback when buttons are pressed */
 .control-button:active {
-  background-color: rgba(255, 255, 255, 0.5);
+  /* Your existing styles */
 }
