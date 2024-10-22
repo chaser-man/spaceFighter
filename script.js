@@ -413,7 +413,9 @@ function drawPlayer() {
   });
 
   // Flames
-  const flameHeight = (30 + Math.random() * 20) * sizeMultiplier;
+  const baseFlameHeight = 30 * sizeMultiplier;
+  // Reduce flame size when moving down, normal size otherwise
+  const flameHeight = (baseFlameHeight + Math.random() * 20) * (player.dy > 0 ? 0.5 : 1);
   const flameWidth = player.width * 0.6;
 
   const flameGradient = ctx.createLinearGradient(

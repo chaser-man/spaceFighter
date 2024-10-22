@@ -16,7 +16,8 @@ body {
 .joystick-container {
     position: fixed;
     bottom: 50px;
-    left: 50px;
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
     width: 100px;
     height: 100px;
     display: none;
