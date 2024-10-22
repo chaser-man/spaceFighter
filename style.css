@@ -12,24 +12,22 @@ body {
   touch-action: none; /* Prevent touch gestures on the canvas */
 }
 
-/* Mobile control buttons container */
-.mobile-controls {
-  display: none; /* Hidden by default */
-}
-
-/* Style for the left and right control buttons */
-.control-button {
-  /* Your existing styles */
+/* Joystick container */
+.joystick-container {
+    position: fixed;
+    bottom: 50px;
+    left: 50px;
+    width: 100px;
+    height: 100px;
+    display: none;
 }
 
 /* Show buttons on mobile devices */
 @media only screen and (max-width: 1024px) {
-  .mobile-controls {
-    display: block;
-  }
-}
-
-/* Optional: Visual feedback when buttons are pressed */
-.control-button:active {
-  /* Your existing styles */
+    .joystick-container {
+        display: block;
+    }
+    .mobile-controls {
+        display: none; /* Hide the old controls */
+    }
 }

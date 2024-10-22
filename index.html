@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Rocket Game</title>
-  <!-- Prevent zooming on mobile devices -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- Link to the external stylesheet -->
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>Rocket Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
-  <!-- Mobile control buttons -->
-  <div class="mobile-controls">
-    <button id="leftButton" class="control-button">&#8592;</button>
-    <button id="rightButton" class="control-button">&#8594;</button>
-  </div>
+    <div id="joystick-container" class="joystick-container"></div>
+    <div class="mobile-controls">
+        <button id="leftButton" class="control-button">&#8592;</button>
+        <button id="rightButton" class="control-button">&#8594;</button>
+    </div>
 
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

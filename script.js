@@ -36,11 +36,12 @@ window.addEventListener('resize', () => {
 // Player properties
 const player = {
   x: canvas.width / 2,
-  y: canvas.height - 100 * sizeMultiplier,
+  y: canvas.height / 2, // Start in center
   width: 40 * sizeMultiplier,
   height: 60 * sizeMultiplier,
   speed: 7,
   dx: 0,
+  dy: 0, // Add vertical movement
   moving: false,
   
   // Function to return the hitboxes
@@ -80,7 +81,20 @@ const player = {
   }
 };
 
+// Update projectile properties to include lastShotTime
 
+
+const projectile = {
+  active: false,
+  x: 0,
+  y: 0,
+  width: 5,
+  height: 15,
+  speed: 10,
+  canShoot: true,
+  cooldownTime: 1500, // Changed from 3000 to 1500 (1.5 seconds)
+  lastShotTime: 0 // Add this line
+};
 // Game state
 let score = 0;
 let gameOver = false;
@@ -244,6 +258,72 @@ function createStars() {
   }
 }
 
+class CollisionAnimation {
+  constructor(ctx, x, y, radius) {
+    this.ctx = ctx;
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.particles = [];
+    this.animationDuration = 30; // frames
+    this.currentFrame = 0;
+  }
+
+  createParticles() {
+    const particleCount = 20;
+    for (let i = 0; i < particleCount; i++) {
+      this.particles.push({
+        x: this.x,
+        y: this.y,
+        radius: Math.random() * 3 + 1,
+        color: `hsl(${Math.random() * 60 + 15}, 100%, 50%)`,
+        velocity: {
+          x: (Math.random() - 0.5) * 5,
+          y: (Math.random() - 0.5) * 5
+        },
+        alpha: 1
+      });
+    }
+  }
+
+  update() {
+    this.currentFrame++;
+    if (this.currentFrame === 1) {
+      this.createParticles();
+    }
+
+    for (let i = 0; i < this.particles.length; i++) {
+      const p = this.particles[i];
+      p.x += p.velocity.x;
+      p.y += p.velocity.y;
+      p.alpha -= 1 / this.animationDuration;
+
+      if (p.alpha <= 0) {
+        this.particles.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  draw() {
+    this.ctx.save();
+    for (const p of this.particles) {
+      this.ctx.globalAlpha = p.alpha;
+      this.ctx.fillStyle = p.color;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+    this.ctx.restore();
+  }
+
+  isFinished() {
+    return this.currentFrame >= this.animationDuration;
+  }
+}
+
+// Add explosions array at the top level with other game state variables
+let explosions = [];
 // Load the rocket image
 const rocketImage = new Image();
 rocketImage.src = 'rocketImage.jpeg';  // Update with the correct path
@@ -404,19 +484,27 @@ function drawPlayer() {
 
 
 function updatePlayer() {
-  player.x += player.dx;
+    player.x += player.dx;
+    player.y += player.dy;
 
-  const finWidth = player.width * 0.4;
+    const finWidth = player.width * 0.4;
 
-  const leftBoundary = player.x - player.width / 2 - finWidth;
-  const rightBoundary = player.x + player.width / 2 + finWidth;
+    // Horizontal boundaries
+    if (player.x - player.width / 2 - finWidth < 0) {
+        player.x = player.width / 2 + finWidth;
+    }
+    if (player.x + player.width / 2 + finWidth > canvas.width) {
+        player.x = canvas.width - player.width / 2 - finWidth;
+    }
 
-  if (leftBoundary < 0) {
-    player.x = player.width / 2 + finWidth;
-  }
-  if (rightBoundary > canvas.width) {
-    player.x = canvas.width - player.width / 2 - finWidth;
-  }
+    // Vertical boundaries
+    if (player.y < 0) {
+        player.y = 0;
+    }
+    if (player.y + player.height > canvas.height) {
+        player.y = canvas.height - player.height;
+    }
+
 }
 
 function spawnObstacles() {
@@ -518,6 +606,9 @@ function gameLoop() {
 
   updatePlayer();
   drawPlayer();
+  updateProjectile();
+  drawCooldownIndicator(); // Add cooldown indicator
+  drawProjectile(); // Add this line
 
   obstacles = obstacles.filter(obstacle => {
     obstacle.update();
@@ -536,6 +627,14 @@ function gameLoop() {
     return true;
   });
 
+  // Draw explosions
+  explosions = explosions.filter(explosion => {
+    explosion.update();
+    explosion.draw();
+    return !explosion.isFinished();
+  });
+
+
   ctx.fillStyle = '#fff';
   ctx.font = '20px Arial';
   ctx.fillText('Score: ' + score, 10, 30);
@@ -543,57 +642,138 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+// Add cooldown indicator function
+function drawCooldownIndicator() {
+  const timeElapsed = Date.now() - projectile.lastShotTime;
+  const progress = timeElapsed / projectile.cooldownTime;
+  
+  // Draw background
+  ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
+  ctx.fillRect(10, 40, 100, 10);
+  
+  // Draw progress bar, always show it
+  ctx.fillStyle = progress >= 1 ? '#44ff44' : '#ff4444';
+  ctx.fillRect(10, 40, 100 * Math.min(progress, 1), 10);
+} // Added missing closing brace
 function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
     player.dx = player.speed;
   } else if (e.key === 'ArrowLeft' || e.key === 'a') {
     player.dx = -player.speed;
   }
+  else if (e.key === 'ArrowUp' || e.key === 'w') {
+    player.dy = -player.speed;
+  }
+  else if (e.key === 'ArrowDown' || e.key === 's') {
+    player.dy = player.speed;
+  }
+  else if (e.key === ' ' && projectile.canShoot) { // Space bar to shoot
+    shootProjectile();
+  }
+
 }
 
 function handleKeyUp(e) {
-  if (
-    e.key === 'ArrowRight' ||
-    e.key === 'd' ||
-    e.key === 'ArrowLeft' ||
-    e.key === 'a'
-  ) {
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'ArrowLeft' || e.key === 'a') {
     player.dx = 0;
+  }
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'ArrowDown' || e.key === 's') {
+    player.dy = 0;
   }
 }
 
 if (isMobileDevice()) {
   document.querySelector('.mobile-controls').style.display = 'block';
+  
+  const joystickOptions = {
+    zone: document.getElementById('joystick-container'),
+    mode: 'static',
+    position: { left: '75px', bottom: '75px' },
+    color: 'white',
+    size: 100
+  };
 
-  leftButton.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent default behavior to avoid zooming
-    player.dx = -player.speed;
-  }, { passive: false });
+  const joystick = nipplejs.create(joystickOptions);
 
-  leftButton.addEventListener('touchend', (e) => {
-    e.preventDefault(); // Prevent default behavior to avoid zooming
+  joystick.on('move', function(evt, data) {
+    const angle = data.angle.radian;
+    const force = Math.min(data.force, 2) / 2; // Normalize force to 0-1
+    
+    player.dx = Math.cos(angle) * player.speed * force;
+    player.dy = -Math.sin(angle) * player.speed * force;
+  });
+
+  joystick.on('end', function() {
     player.dx = 0;
-  }, { passive: false });
+    player.dy = 0;
+  });
+}
 
-  rightButton.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent default behavior to avoid zooming
-    player.dx = player.speed;
+// Add touch swipe detection for mobile
+if (isMobileDevice()) {
+  let touchStartY = 0;
+  
+  canvas.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
   }, { passive: false });
-
-  rightButton.addEventListener('touchend', (e) => {
-    e.preventDefault(); // Prevent default behavior to avoid zooming
-    player.dx = 0;
-  }, { passive: false });
-
-  leftButton.addEventListener('touchmove', (e) => {
-    e.preventDefault(); // Prevent default behavior to avoid zooming
-  }, { passive: false });
-
-  rightButton.addEventListener('touchmove', (e) => {
-    e.preventDefault(); // Prevent default behavior to avoid zooming
+  
+  canvas.addEventListener('touchend', (e) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const swipeDistance = touchStartY - touchEndY;
+    
+    if (swipeDistance > 50) { // Minimum swipe distance
+      shootProjectile();
+    }
   }, { passive: false });
 }
 
+// Add projectile functions
+function shootProjectile() {
+  if (!projectile.canShoot || gameOver) return;
+  
+  projectile.active = true;
+  projectile.x = player.x;
+  projectile.y = player.y;
+  projectile.canShoot = false;
+  projectile.lastShotTime = Date.now(); // Add this line
+  
+  // Start cooldown
+  setTimeout(() => {
+    projectile.canShoot = true;
+  }, projectile.cooldownTime);
+}
+
+function drawProjectile() {
+  if (!projectile.active) return;
+  
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(projectile.x - projectile.width/2, projectile.y, projectile.width, projectile.height);
+}
+
+function updateProjectile() {
+  if (!projectile.active) return;
+  
+  projectile.y -= projectile.speed;
+  
+  // Deactivate if off screen
+  if (projectile.y < 0) {
+    projectile.active = false;
+  }
+  
+  // Check for collision with obstacles
+  obstacles = obstacles.filter(obstacle => {
+    if (projectile.active &&
+        projectile.x >= obstacle.x &&
+        projectile.x <= obstacle.x + obstacle.size &&
+        projectile.y >= obstacle.y &&
+        projectile.y <= obstacle.y + obstacle.size) {
+      projectile.active = false;
+      explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size/2, obstacle.y + obstacle.size/2, obstacle.size/2));
+      return false; // Remove the obstacle
+    }
+    return true;
+  });
+}
 
 function showGameOver() {
   const gameOverDiv = document.createElement('div');
