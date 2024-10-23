@@ -33,6 +33,7 @@ window.addEventListener('resize', () => {
   player.y = canvas.height - 100 * sizeMultiplier;
 });
 
+// Update the hitbox function to match the new shape
 // Player properties
 const player = {
   x: canvas.width / 2,
@@ -80,7 +81,7 @@ const player = {
     return { rhombus, leftFin, rightFin };
   }
 };
-
+// Update projectile properties to include lastShotTime
 // Update projectile properties to include lastShotTime
 
 
@@ -657,6 +658,7 @@ function drawCooldownIndicator() {
   ctx.fillStyle = progress >= 1 ? '#44ff44' : '#ff4444';
   ctx.fillRect(10, 40, 100 * Math.min(progress, 1), 10);
 } // Added missing closing brace
+// Add missing newline
 function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
     player.dx = player.speed;

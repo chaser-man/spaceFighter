@@ -15,9 +15,9 @@ body {
 /* Joystick container */
 .joystick-container {
     position: fixed;
-    bottom: 50px;
+    bottom: 20px; /* Changed from 50px to 20px to move it lower */
     left: 50%;
-    transform: translateX(-50%); /* Center horizontally */
+    transform: translateX(-50%);
     width: 100px;
     height: 100px;
     display: none;
