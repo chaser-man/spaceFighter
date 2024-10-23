@@ -5,7 +5,6 @@ const ctx = canvas.getContext('2d');
 // Debug mode flag
 const debug = false; // Set to true to show hitboxes, false to hide them
 
-
 // Detect mobile devices
 function isMobileDevice() {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -33,7 +32,6 @@ window.addEventListener('resize', () => {
   player.y = canvas.height - 100 * sizeMultiplier;
 });
 
-// Update the hitbox function to match the new shape
 // Player properties
 const player = {
   x: canvas.width / 2,
@@ -44,18 +42,18 @@ const player = {
   dx: 0,
   dy: 0, // Add vertical movement
   moving: false,
-  
+
   // Function to return the hitboxes
   getHitboxes() {
     // Main body rhombus
-    const topX = this.x; // X-coordinate for the top and bottom points (centered on the ship)
-    const topY = this.y; // Y-coordinate for the top point
-    const bottomX = this.x; // X-coordinate for the bottom point (centered on the ship)
-    const bottomY = this.y + this.height; // Y-coordinate for the bottom point
-    const leftX = this.x - this.width / 2; // Leftmost point of the visible body
-    const leftY = this.y + this.height * 0.5; // Y-coordinate for the left side
-    const rightX = this.x + this.width / 2; // Rightmost point of the visible body
-    const rightY = this.y + this.height * 0.5; // Y-coordinate for the right side
+    const topX = this.x;
+    const topY = this.y;
+    const bottomX = this.x;
+    const bottomY = this.y + this.height;
+    const leftX = this.x - this.width / 2;
+    const leftY = this.y + this.height * 0.5;
+    const rightX = this.x + this.width / 2;
+    const rightY = this.y + this.height * 0.5;
 
     const rhombus = [
       { x: topX, y: topY },
@@ -66,25 +64,23 @@ const player = {
 
     // Left fin (triangle)
     const leftFin = [
-      { x: this.x - this.width * 0.4, y: this.y + this.height * 0.65 }, // Top
-      { x: this.x - this.width * 0.4 - this.width * 0.3, y: this.y + this.height * 0.85 }, // Bottom-left
-      { x: this.x - this.width * 0.4, y: this.y + this.height * 0.85 } // Bottom-right
+      { x: this.x - this.width * 0.4, y: this.y + this.height * 0.65 },
+      { x: this.x - this.width * 0.4 - this.width * 0.3, y: this.y + this.height * 0.85 },
+      { x: this.x - this.width * 0.4, y: this.y + this.height * 0.85 }
     ];
 
     // Right fin (triangle)
     const rightFin = [
-      { x: this.x + this.width * 0.4, y: this.y + this.height * 0.65 }, // Top
-      { x: this.x + this.width * 0.4 + this.width * 0.3, y: this.y + this.height * 0.85 }, // Bottom-right
-      { x: this.x + this.width * 0.4, y: this.y + this.height * 0.85 } // Bottom-left
+      { x: this.x + this.width * 0.4, y: this.y + this.height * 0.65 },
+      { x: this.x + this.width * 0.4 + this.width * 0.3, y: this.y + this.height * 0.85 },
+      { x: this.x + this.width * 0.4, y: this.y + this.height * 0.85 }
     ];
 
     return { rhombus, leftFin, rightFin };
   }
 };
-// Update projectile properties to include lastShotTime
-// Update projectile properties to include lastShotTime
 
-
+// Projectile properties
 const projectile = {
   active: false,
   x: 0,
@@ -93,9 +89,10 @@ const projectile = {
   height: 15,
   speed: 10,
   canShoot: true,
-  cooldownTime: 1500, // Changed from 3000 to 1500 (1.5 seconds)
-  lastShotTime: 0 // Add this line
+  cooldownTime: 1500, // 1.5 seconds
+  lastShotTime: 0
 };
+
 // Game state
 let score = 0;
 let gameOver = false;
@@ -103,26 +100,32 @@ let obstacles = [];
 let stars = [];
 const maxObstacles = 5;
 
+// Explosions array
+let explosions = [];
+
+// Chain lines array
+let chainLines = [];
+
+// Obstacle class
 class Obstacle {
   constructor(x, y, size, speed, rotationSpeed) {
-    this.x = x; // X position of the obstacle
-    this.y = y; // Y position of the obstacle
-    this.size = size; // Size of the obstacle (width and height)
-    this.speed = speed; // Vertical speed of the obstacle
-    this.rotation = 0; // Current rotation angle
-    this.rotationSpeed = rotationSpeed; // Speed of rotation
-    this.vertices = this.createAsteroidShape(); // Array of points defining the asteroid's shape
-    this.craters = this.createCraters(); // Array of craters on the asteroid
-    this.spots = this.createSpots(); // Array of spots on the asteroid
+    this.x = x;
+    this.y = y;
+    this.size = size;
+    this.speed = speed;
+    this.rotation = 0;
+    this.rotationSpeed = rotationSpeed;
+    this.vertices = this.createAsteroidShape();
+    this.craters = this.createCraters();
+    this.spots = this.createSpots();
   }
 
-  // Creates a random shape for the asteroid
   createAsteroidShape() {
     const points = [];
-    const numVertices = Math.floor(Math.random() * 5) + 7; // Random number of vertices between 7 and 11
+    const numVertices = Math.floor(Math.random() * 5) + 7;
     for (let i = 0; i < numVertices; i++) {
       const angle = (i / numVertices) * Math.PI * 2;
-      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6); // Random radius for irregular shape
+      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6);
       points.push({
         x: radius * Math.cos(angle),
         y: radius * Math.sin(angle)
@@ -131,10 +134,9 @@ class Obstacle {
     return points;
   }
 
-  // Creates random craters on the asteroid
   createCraters() {
     const craters = [];
-    const numCraters = Math.floor(Math.random() * 3) + 2; // Random number of craters between 2 and 4
+    const numCraters = Math.floor(Math.random() * 3) + 2;
     for (let i = 0; i < numCraters; i++) {
       const craterX = (Math.random() - 0.5) * this.size * 0.6;
       const craterY = (Math.random() - 0.5) * this.size * 0.6;
@@ -144,10 +146,9 @@ class Obstacle {
     return craters;
   }
 
-  // Creates small spots on the asteroid for texture
   createSpots() {
     const spots = [];
-    const numSpots = Math.floor(Math.random() * 5) + 5; // Random number of spots between 5 and 9
+    const numSpots = Math.floor(Math.random() * 5) + 5;
     for (let i = 0; i < numSpots; i++) {
       const spotX = (Math.random() - 0.5) * this.size * 0.8;
       const spotY = (Math.random() - 0.5) * this.size * 0.8;
@@ -157,13 +158,11 @@ class Obstacle {
     return spots;
   }
 
-  // Draws the obstacle (asteroid) on the canvas
   draw() {
     ctx.save();
-    ctx.translate(this.x + this.size / 2, this.y + this.size / 2); // Move to the center of the asteroid
-    ctx.rotate(this.rotation); // Rotate the asteroid
+    ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
+    ctx.rotate(this.rotation);
 
-    // Create a gradient for the asteroid's color
     const gradient = ctx.createRadialGradient(
       -this.size * 0.2, -this.size * 0.2, this.size * 0.2,
       0, 0, this.size
@@ -172,7 +171,6 @@ class Obstacle {
     gradient.addColorStop(0.5, '#5a5a5a');
     gradient.addColorStop(1, '#3e3e3e');
 
-    // Draw the main shape of the asteroid
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
@@ -182,7 +180,6 @@ class Obstacle {
     ctx.closePath();
     ctx.fill();
 
-    // Draw craters on the asteroid
     for (let crater of this.craters) {
       ctx.beginPath();
       ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
@@ -196,7 +193,6 @@ class Obstacle {
       ctx.fill();
     }
 
-    // Draw spots on the asteroid
     for (let spot of this.spots) {
       ctx.beginPath();
       ctx.arc(spot.x, spot.y, spot.radius, 0, Math.PI * 2);
@@ -204,14 +200,12 @@ class Obstacle {
       ctx.fill();
     }
 
-    // Optional: Draw the outline of the asteroid
     ctx.strokeStyle = '#2C2C2C';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.restore();
 
-    // Draw hitbox if debug mode is enabled
     if (debug) {
       ctx.strokeStyle = 'red';
       ctx.lineWidth = 2;
@@ -219,14 +213,13 @@ class Obstacle {
     }
   }
 
-  // Updates the obstacle's position and rotation
   update() {
-    this.y += this.speed; // Move down the screen
-    this.rotation += this.rotationSpeed; // Rotate the asteroid
+    this.y += this.speed;
+    this.rotation += this.rotationSpeed;
   }
 }
 
-
+// Star class
 class Star {
   constructor() {
     this.x = Math.random() * canvas.width;
@@ -259,6 +252,7 @@ function createStars() {
   }
 }
 
+// CollisionAnimation class
 class CollisionAnimation {
   constructor(ctx, x, y, radius) {
     this.ctx = ctx;
@@ -323,12 +317,60 @@ class CollisionAnimation {
   }
 }
 
-// Add explosions array at the top level with other game state variables
-let explosions = [];
-// Load the rocket image
-const rocketImage = new Image();
-rocketImage.src = 'rocketImage.jpeg';  // Update with the correct path
+// Function to find the nearest asteroid
+function findNearestAsteroid(x, y, excludedAsteroids) {
+  let nearest = null;
+  let minDistance = Infinity;
 
+  for (const asteroid of obstacles) {
+    if (excludedAsteroids.includes(asteroid)) continue;
+
+    const dx = (asteroid.x + asteroid.size / 2) - x;
+    const dy = (asteroid.y + asteroid.size / 2) - y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearest = asteroid;
+    }
+  }
+
+  return nearest;
+}
+
+// Chain reaction function
+function triggerChainReaction(startX, startY, remainingChain = 4, hitAsteroids = []) {
+  if (remainingChain <= 0) return;
+
+  const nearest = findNearestAsteroid(startX, startY, hitAsteroids);
+
+  if (!nearest) return;
+
+  // Draw connecting line
+  chainLines.push({
+    startX: startX,
+    startY: startY,
+    endX: nearest.x + nearest.size / 2,
+    endY: nearest.y + nearest.size / 2,
+    duration: 15 // frames
+  });
+
+  // Add to hit asteroids
+  hitAsteroids.push(nearest);
+
+  // Create explosion
+  explosions.push(new CollisionAnimation(ctx, nearest.x + nearest.size / 2, nearest.y + nearest.size / 2, nearest.size / 2));
+
+  // Remove the asteroid
+  obstacles = obstacles.filter(a => a !== nearest);
+
+  // Continue chain after a brief delay
+  setTimeout(() => {
+    triggerChainReaction(nearest.x + nearest.size / 2, nearest.y + nearest.size / 2, remainingChain - 1, hitAsteroids);
+  }, 100);
+}
+
+// Draw player function
 function drawPlayer() {
   ctx.save();
 
@@ -363,14 +405,13 @@ function drawPlayer() {
   const finWidth = player.width * 0.3;
   const finHeight = player.height * 0.3;
 
-  // Adjusted the fins to match the body more closely
   // Left fin
   ctx.beginPath();
-  ctx.moveTo(player.x - player.width * 0.4, player.y + player.height * 0.65); // Higher position
+  ctx.moveTo(player.x - player.width * 0.4, player.y + player.height * 0.65);
   ctx.lineTo(
     player.x - player.width * 0.4 - finWidth,
     player.y + player.height * 0.85
-  ); // Aligned more with the body curve
+  );
   ctx.lineTo(player.x - player.width * 0.4, player.y + player.height * 0.85);
   ctx.closePath();
   ctx.fillStyle = '#ff4000';
@@ -378,11 +419,11 @@ function drawPlayer() {
 
   // Right fin
   ctx.beginPath();
-  ctx.moveTo(player.x + player.width * 0.4, player.y + player.height * 0.65); // Higher position
+  ctx.moveTo(player.x + player.width * 0.4, player.y + player.height * 0.65);
   ctx.lineTo(
     player.x + player.width * 0.4 + finWidth,
     player.y + player.height * 0.85
-  ); // Aligned more with the body curve
+  );
   ctx.lineTo(player.x + player.width * 0.4, player.y + player.height * 0.85);
   ctx.closePath();
   ctx.fillStyle = '#ff4000';
@@ -415,7 +456,6 @@ function drawPlayer() {
 
   // Flames
   const baseFlameHeight = 30 * sizeMultiplier;
-  // Reduce flame size when moving down, normal size otherwise
   const flameHeight = (baseFlameHeight + Math.random() * 20) * (player.dy > 0 ? 0.5 : 1);
   const flameWidth = player.width * 0.6;
 
@@ -447,69 +487,66 @@ function drawPlayer() {
     ctx.lineWidth = 2;
 
     // Main body hitbox (rhombus)
-    const topX = player.x; // X-coordinate for the top and bottom points (centered on the ship)
-    const topY = player.y; // Y-coordinate for the top point
-    const bottomX = player.x; // X-coordinate for the bottom point (centered on the ship)
-    const bottomY = player.y + player.height; // Y-coordinate for the bottom point
-    const leftX = player.x - player.width / 2; // Leftmost point of the visible body
-    const leftY = player.y + player.height * 0.5; // Y-coordinate for the left side
-    const rightX = player.x + player.width / 2; // Rightmost point of the visible body
-    const rightY = player.y + player.height * 0.5; // Y-coordinate for the right side
+    const topX = player.x;
+    const topY = player.y;
+    const bottomX = player.x;
+    const bottomY = player.y + player.height;
+    const leftX = player.x - player.width / 2;
+    const leftY = player.y + player.height * 0.5;
+    const rightX = player.x + player.width / 2;
+    const rightY = player.y + player.height * 0.5;
 
     ctx.beginPath();
-    ctx.moveTo(topX, topY); // Move to the top point
-    ctx.lineTo(leftX, leftY); // Draw line to the left corner
-    ctx.lineTo(bottomX, bottomY); // Draw line to the bottom corner
-    ctx.lineTo(rightX, rightY); // Draw line to the right corner
-    ctx.closePath(); // Close the path back to the top point
-    ctx.stroke(); // Draw the rhombus outline
-
-    // Draw fin hitboxes (triangles)
-    // Left fin hitbox (triangle)
-    ctx.beginPath();
-    ctx.moveTo(player.x - player.width * 0.4, player.y + player.height * 0.65); // Top of the left fin
-    ctx.lineTo(player.x - player.width * 0.4 - player.width * 0.3, player.y + player.height * 0.85); // Bottom-left of the left fin
-    ctx.lineTo(player.x - player.width * 0.4, player.y + player.height * 0.85); // Bottom-right of the left fin
+    ctx.moveTo(topX, topY);
+    ctx.lineTo(leftX, leftY);
+    ctx.lineTo(bottomX, bottomY);
+    ctx.lineTo(rightX, rightY);
     ctx.closePath();
     ctx.stroke();
 
-    // Right fin hitbox (triangle)
+    // Left fin hitbox
     ctx.beginPath();
-    ctx.moveTo(player.x + player.width * 0.4, player.y + player.height * 0.65); // Top of the right fin
-    ctx.lineTo(player.x + player.width * 0.4 + player.width * 0.3, player.y + player.height * 0.85); // Bottom-right of the right fin
-    ctx.lineTo(player.x + player.width * 0.4, player.y + player.height * 0.85); // Bottom-left of the right fin
+    ctx.moveTo(player.x - player.width * 0.4, player.y + player.height * 0.65);
+    ctx.lineTo(player.x - player.width * 0.4 - player.width * 0.3, player.y + player.height * 0.85);
+    ctx.lineTo(player.x - player.width * 0.4, player.y + player.height * 0.85);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Right fin hitbox
+    ctx.beginPath();
+    ctx.moveTo(player.x + player.width * 0.4, player.y + player.height * 0.65);
+    ctx.lineTo(player.x + player.width * 0.4 + player.width * 0.3, player.y + player.height * 0.85);
+    ctx.lineTo(player.x + player.width * 0.4, player.y + player.height * 0.85);
     ctx.closePath();
     ctx.stroke();
   }
 }
 
-
-
-
+// Update player position
 function updatePlayer() {
-    player.x += player.dx;
-    player.y += player.dy;
+  player.x += player.dx;
+  player.y += player.dy;
 
-    const finWidth = player.width * 0.4;
+  const finWidth = player.width * 0.4;
 
-    // Horizontal boundaries
-    if (player.x - player.width / 2 - finWidth < 0) {
-        player.x = player.width / 2 + finWidth;
-    }
-    if (player.x + player.width / 2 + finWidth > canvas.width) {
-        player.x = canvas.width - player.width / 2 - finWidth;
-    }
+  // Horizontal boundaries
+  if (player.x - player.width / 2 - finWidth < 0) {
+    player.x = player.width / 2 + finWidth;
+  }
+  if (player.x + player.width / 2 + finWidth > canvas.width) {
+    player.x = canvas.width - player.width / 2 - finWidth;
+  }
 
-    // Vertical boundaries
-    if (player.y < 0) {
-        player.y = 0;
-    }
-    if (player.y + player.height > canvas.height) {
-        player.y = canvas.height - player.height;
-    }
-
+  // Vertical boundaries
+  if (player.y < 0) {
+    player.y = 0;
+  }
+  if (player.y + player.height > canvas.height) {
+    player.y = canvas.height - player.height;
+  }
 }
 
+// Spawn obstacles
 function spawnObstacles() {
   if (gameOver) return;
 
@@ -546,8 +583,8 @@ function isPointInPolygon(point, polygon) {
     next = current + 1;
     if (next == polygon.length) next = 0;
 
-    const vc = polygon[current]; // Current vertex
-    const vn = polygon[next]; // Next vertex
+    const vc = polygon[current];
+    const vn = polygon[next];
 
     if (
       ((vc.y >= point.y && vn.y < point.y) || (vc.y < point.y && vn.y >= point.y)) &&
@@ -559,46 +596,34 @@ function isPointInPolygon(point, polygon) {
   return collision;
 }
 
-
+// Detect collision
 function detectCollision(player, obstacle) {
   const hitboxes = player.getHitboxes();
 
-  // Check if any corner of the obstacle is inside any of the hitboxes
   const obstacleCorners = [
-    { x: obstacle.x, y: obstacle.y }, // Top-left
-    { x: obstacle.x + obstacle.size, y: obstacle.y }, // Top-right
-    { x: obstacle.x, y: obstacle.y + obstacle.size }, // Bottom-left
-    { x: obstacle.x + obstacle.size, y: obstacle.y + obstacle.size } // Bottom-right
+    { x: obstacle.x, y: obstacle.y },
+    { x: obstacle.x + obstacle.size, y: obstacle.y },
+    { x: obstacle.x, y: obstacle.y + obstacle.size },
+    { x: obstacle.x + obstacle.size, y: obstacle.y + obstacle.size }
   ];
 
-  // Check collision with rhombus (main body)
   for (const corner of obstacleCorners) {
-    if (isPointInPolygon(corner, hitboxes.rhombus)) {
-      return true; // Collision detected
+    if (
+      isPointInPolygon(corner, hitboxes.rhombus) ||
+      isPointInPolygon(corner, hitboxes.leftFin) ||
+      isPointInPolygon(corner, hitboxes.rightFin)
+    ) {
+      return true;
     }
   }
 
-  // Check collision with left fin
-  for (const corner of obstacleCorners) {
-    if (isPointInPolygon(corner, hitboxes.leftFin)) {
-      return true; // Collision detected
-    }
-  }
-
-  // Check collision with right fin
-  for (const corner of obstacleCorners) {
-    if (isPointInPolygon(corner, hitboxes.rightFin)) {
-      return true; // Collision detected
-    }
-  }
-
-  return false; // No collision
+  return false;
 }
 
+// Game loop
 function gameLoop() {
   if (gameOver) return;
 
-  // Fill the background with black
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -610,8 +635,8 @@ function gameLoop() {
   updatePlayer();
   drawPlayer();
   updateProjectile();
-  drawCooldownIndicator(); // Add cooldown indicator
-  drawProjectile(); // Add this line
+  drawCooldownIndicator();
+  drawProjectile();
 
   obstacles = obstacles.filter(obstacle => {
     obstacle.update();
@@ -637,6 +662,18 @@ function gameLoop() {
     return !explosion.isFinished();
   });
 
+  // Draw chain lines
+  chainLines = chainLines.filter(line => {
+    line.duration--;
+    ctx.beginPath();
+    ctx.strokeStyle = '#00ffff';
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; // Set opacity to 0.5
+    ctx.lineWidth = 2;
+    ctx.moveTo(line.startX, line.startY);
+    ctx.lineTo(line.endX, line.endY);
+    ctx.stroke();
+    return line.duration > 0;
+  });
 
   ctx.fillStyle = '#fff';
   ctx.font = '20px Arial';
@@ -645,20 +682,21 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Add cooldown indicator function
+// Draw cooldown indicator
 function drawCooldownIndicator() {
   const timeElapsed = Date.now() - projectile.lastShotTime;
   const progress = timeElapsed / projectile.cooldownTime;
-  
+
   // Draw background
   ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
   ctx.fillRect(10, 40, 100, 10);
-  
-  // Draw progress bar, always show it
+
+  // Draw progress bar
   ctx.fillStyle = progress >= 1 ? '#44ff44' : '#ff4444';
   ctx.fillRect(10, 40, 100 * Math.min(progress, 1), 10);
-} // Added missing closing brace
-// Add missing newline
+}
+
+// Handle key down
 function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
     player.dx = player.speed;
@@ -671,12 +709,12 @@ function handleKeyDown(e) {
   else if (e.key === 'ArrowDown' || e.key === 's') {
     player.dy = player.speed;
   }
-  else if (e.key === ' ' && projectile.canShoot) { // Space bar to shoot
+  else if (e.key === ' ' && projectile.canShoot) {
     shootProjectile();
   }
-
 }
 
+// Handle key up
 function handleKeyUp(e) {
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'ArrowLeft' || e.key === 'a') {
     player.dx = 0;
@@ -686,9 +724,10 @@ function handleKeyUp(e) {
   }
 }
 
+// Mobile controls
 if (isMobileDevice()) {
   document.querySelector('.mobile-controls').style.display = 'block';
-  
+
   const joystickOptions = {
     zone: document.getElementById('joystick-container'),
     mode: 'static',
@@ -699,86 +738,96 @@ if (isMobileDevice()) {
 
   const joystick = nipplejs.create(joystickOptions);
 
-  joystick.on('move', function(evt, data) {
+  joystick.on('move', function (evt, data) {
     const angle = data.angle.radian;
-    const force = Math.min(data.force, 2) / 2; // Normalize force to 0-1
-    
+    const force = Math.min(data.force, 2) / 2;
+
     player.dx = Math.cos(angle) * player.speed * force;
     player.dy = -Math.sin(angle) * player.speed * force;
   });
 
-  joystick.on('end', function() {
+  joystick.on('end', function () {
     player.dx = 0;
     player.dy = 0;
   });
 }
 
-// Add touch swipe detection for mobile
+// Touch swipe detection for shooting on mobile
 if (isMobileDevice()) {
   let touchStartY = 0;
-  
+
   canvas.addEventListener('touchstart', (e) => {
     touchStartY = e.touches[0].clientY;
   }, { passive: false });
-  
+
   canvas.addEventListener('touchend', (e) => {
     const touchEndY = e.changedTouches[0].clientY;
     const swipeDistance = touchStartY - touchEndY;
-    
-    if (swipeDistance > 50) { // Minimum swipe distance
+
+    if (swipeDistance > 50) {
       shootProjectile();
     }
   }, { passive: false });
 }
 
-// Add projectile functions
+// Shoot projectile
 function shootProjectile() {
   if (!projectile.canShoot || gameOver) return;
-  
+
   projectile.active = true;
   projectile.x = player.x;
   projectile.y = player.y;
   projectile.canShoot = false;
-  projectile.lastShotTime = Date.now(); // Add this line
-  
+  projectile.lastShotTime = Date.now();
+
   // Start cooldown
   setTimeout(() => {
     projectile.canShoot = true;
   }, projectile.cooldownTime);
 }
 
+// Draw projectile
 function drawProjectile() {
   if (!projectile.active) return;
-  
+
   ctx.fillStyle = '#ff0000';
-  ctx.fillRect(projectile.x - projectile.width/2, projectile.y, projectile.width, projectile.height);
+  ctx.fillRect(projectile.x - projectile.width / 2, projectile.y, projectile.width, projectile.height);
 }
 
+// Update projectile
 function updateProjectile() {
   if (!projectile.active) return;
-  
+
   projectile.y -= projectile.speed;
-  
-  // Deactivate if off screen
+
   if (projectile.y < 0) {
     projectile.active = false;
+    return;
   }
-  
-  // Check for collision with obstacles
-  obstacles = obstacles.filter(obstacle => {
-    if (projectile.active &&
-        projectile.x >= obstacle.x &&
-        projectile.x <= obstacle.x + obstacle.size &&
-        projectile.y >= obstacle.y &&
-        projectile.y <= obstacle.y + obstacle.size) {
+
+  for (let i = 0; i < obstacles.length; i++) {
+    const obstacle = obstacles[i];
+    if (projectile.x >= obstacle.x &&
+      projectile.x <= obstacle.x + obstacle.size &&
+      projectile.y >= obstacle.y &&
+      projectile.y <= obstacle.y + obstacle.size) {
+
       projectile.active = false;
-      explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size/2, obstacle.y + obstacle.size/2, obstacle.size/2));
-      return false; // Remove the obstacle
+
+      // Start chain reaction from hit asteroid
+      explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, obstacle.size / 2));
+      obstacles.splice(i, 1);
+
+      // Random chain length between 2-5
+      const chainLength = Math.floor(Math.random() * 4) + 2;
+      triggerChainReaction(obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, chainLength - 1);
+
+      break;
     }
-    return true;
-  });
+  }
 }
 
+// Show game over screen
 function showGameOver() {
   const gameOverDiv = document.createElement('div');
   gameOverDiv.style.position = 'absolute';
@@ -815,6 +864,7 @@ function showGameOver() {
   });
 }
 
+// Start game
 function startGame() {
   createStars();
   spawnObstacles();
