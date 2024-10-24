@@ -42,6 +42,9 @@ const player = {
   dx: 0,
   dy: 0, // Add vertical movement
   moving: false,
+  shield: false,
+  rapidFire: false,
+  magnet: false,
 
   // Function to return the hitboxes
   getHitboxes() {
@@ -105,6 +108,17 @@ let explosions = [];
 
 // Chain lines array
 let chainLines = [];
+
+// Powerups array
+let powerups = [];
+
+// Add these variables to your global scope
+let shieldEndTime = 0;
+const shieldDuration = 10000; // 10 seconds
+const shieldWarningTime = 3000; // Start flashing 3 seconds before end
+
+// Replace the single projectile object with an array of projectiles
+let projectiles = [];
 
 // Obstacle class
 class Obstacle {
@@ -317,6 +331,85 @@ class CollisionAnimation {
   }
 }
 
+// Powerup class
+class Powerup {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.width = 30;
+    this.height = 30;
+    this.type = type;
+    this.speed = 2;
+    this.rotation = 0;
+  }
+
+  update() {
+    this.y += this.speed;
+    this.rotation += 0.05;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+    
+    this.drawOuterCircle();
+    this.drawInnerShape();
+    
+    ctx.restore();
+  }
+
+  drawOuterCircle() {
+    ctx.beginPath();
+    ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
+    
+    if (this.type === 'shield') {
+      gradient.addColorStop(0, 'rgba(0, 255, 255, 0.8)');
+      gradient.addColorStop(1, 'rgba(0, 150, 255, 0.4)');
+    } else if (this.type === 'rapidFire') {
+      gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+      gradient.addColorStop(1, 'rgba(255, 100, 0, 0.4)');
+    }
+    
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+
+  drawInnerShape() {
+    if (this.type === 'shield') {
+      this.drawShieldShape();
+    } else if (this.type === 'rapidFire') {
+      this.drawLightningBolt();
+    }
+  }
+
+  drawShieldShape() {
+    ctx.beginPath();
+    ctx.moveTo(0, -this.height / 2);
+    ctx.quadraticCurveTo(this.width / 2, -this.height / 4, this.width / 3, this.height / 4);
+    ctx.lineTo(0, this.height / 2);
+    ctx.lineTo(-this.width / 3, this.height / 4);
+    ctx.quadraticCurveTo(-this.width / 2, -this.height / 4, 0, -this.height / 2);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(200, 255, 255, 0.8)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  drawLightningBolt() {
+    ctx.beginPath();
+    ctx.moveTo(-this.width / 6, -this.height / 3);
+    ctx.lineTo(this.width / 6, 0);
+    ctx.lineTo(-this.width / 6, 0);
+    ctx.lineTo(this.width / 6, this.height / 3);
+    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+}
+
 // Function to find the nearest asteroid
 function findNearestAsteroid(x, y, excludedAsteroids) {
   let nearest = null;
@@ -520,6 +613,28 @@ function drawPlayer() {
     ctx.closePath();
     ctx.stroke();
   }
+
+  // Draw shield if active
+  if (player.shield) {
+    const timeLeft = shieldEndTime - Date.now();
+    if (timeLeft <= shieldWarningTime) {
+      // Flash the shield
+      if (Math.floor(Date.now() / 100) % 2 === 0) {
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + player.height / 2, player.width * 0.75, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+      }
+    } else {
+      // Draw normal shield
+      ctx.beginPath();
+      ctx.arc(player.x, player.y + player.height / 2, player.width * 0.75, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    }
+  }
 }
 
 // Update player position
@@ -556,6 +671,14 @@ function spawnObstacles() {
 
   for (let i = 0; i < numObstacles; i++) {
     spawnObstacle(cappedScore);
+  }
+
+  // Spawn powerups with a 30% chance
+  if (Math.random() < 0.2) {
+    const powerupTypes = ['shield', 'rapidFire'];
+    const randomType = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
+    const x = Math.random() * (canvas.width - 30);
+    powerups.push(new Powerup(x, -30, randomType));
   }
 
   const spawnDelay = Math.max(300, 1000 - cappedScore * 20);
@@ -634,9 +757,10 @@ function gameLoop() {
 
   updatePlayer();
   drawPlayer();
-  updateProjectile();
+  updateProjectiles();
+  drawProjectiles();
   drawCooldownIndicator();
-  drawProjectile();
+  drawPowerupIndicators();
 
   obstacles = obstacles.filter(obstacle => {
     obstacle.update();
@@ -647,9 +771,17 @@ function gameLoop() {
     }
 
     if (detectCollision(player, obstacle)) {
-      gameOver = true;
-      showGameOver();
-      return false;
+      if (player.shield) {
+        // Shield was used, remove the obstacle and deactivate shield
+        explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, obstacle.size / 2));
+        player.shield = false;
+        shieldEndTime = 0;
+        return false;
+      } else {
+        gameOver = true;
+        showGameOver();
+        return false;
+      }
     }
 
     return true;
@@ -674,6 +806,36 @@ function gameLoop() {
     ctx.stroke();
     return line.duration > 0;
   });
+
+  // Update and draw powerups
+  powerups = powerups.filter(powerup => {
+    powerup.update();
+    powerup.draw();
+
+    // Check for collision with player
+    if (
+      player.x < powerup.x + powerup.width &&
+      player.x + player.width > powerup.x &&
+      player.y < powerup.y + powerup.height &&
+      player.y + player.height > powerup.y
+    ) {
+      applyPowerup(powerup.type);
+      return false;
+    }
+
+    return powerup.y < canvas.height;
+  });
+
+  // Remove magnet effect code
+  
+  // Draw shield if active
+  if (player.shield) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y + player.height / 2, player.width * 0.75, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+  }
 
   ctx.fillStyle = '#fff';
   ctx.font = '20px Arial';
@@ -770,61 +932,65 @@ if (isMobileDevice()) {
   }, { passive: false });
 }
 
-// Shoot projectile
+// Modify the shootProjectile function
 function shootProjectile() {
   if (!projectile.canShoot || gameOver) return;
 
-  projectile.active = true;
-  projectile.x = player.x;
-  projectile.y = player.y;
+  projectiles.push({
+    x: player.x,
+    y: player.y,
+    width: 5,
+    height: 15,
+    speed: 10
+  });
+
   projectile.canShoot = false;
   projectile.lastShotTime = Date.now();
 
   // Start cooldown
   setTimeout(() => {
     projectile.canShoot = true;
-  }, projectile.cooldownTime);
+  }, player.rapidFire ? 250 : projectile.cooldownTime);
 }
 
-// Draw projectile
-function drawProjectile() {
-  if (!projectile.active) return;
-
+// Modify the drawProjectile function
+function drawProjectiles() {
   ctx.fillStyle = '#ff0000';
-  ctx.fillRect(projectile.x - projectile.width / 2, projectile.y, projectile.width, projectile.height);
+  projectiles.forEach(proj => {
+    ctx.fillRect(proj.x - proj.width / 2, proj.y, proj.width, proj.height);
+  });
 }
 
-// Update projectile
-function updateProjectile() {
-  if (!projectile.active) return;
+// Modify the updateProjectile function
+function updateProjectiles() {
+  projectiles = projectiles.filter(proj => {
+    proj.y -= proj.speed;
 
-  projectile.y -= projectile.speed;
-
-  if (projectile.y < 0) {
-    projectile.active = false;
-    return;
-  }
-
-  for (let i = 0; i < obstacles.length; i++) {
-    const obstacle = obstacles[i];
-    if (projectile.x >= obstacle.x &&
-      projectile.x <= obstacle.x + obstacle.size &&
-      projectile.y >= obstacle.y &&
-      projectile.y <= obstacle.y + obstacle.size) {
-
-      projectile.active = false;
-
-      // Start chain reaction from hit asteroid
-      explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, obstacle.size / 2));
-      obstacles.splice(i, 1);
-
-      // Random chain length between 2-5
-      const chainLength = Math.floor(Math.random() * 4) + 2;
-      triggerChainReaction(obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, chainLength - 1);
-
-      break;
+    if (proj.y < 0) {
+      return false;
     }
-  }
+
+    for (let i = 0; i < obstacles.length; i++) {
+      const obstacle = obstacles[i];
+      if (proj.x >= obstacle.x &&
+          proj.x <= obstacle.x + obstacle.size &&
+          proj.y >= obstacle.y &&
+          proj.y <= obstacle.y + obstacle.size) {
+
+        // Start chain reaction from hit asteroid
+        explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, obstacle.size / 2));
+        obstacles.splice(i, 1);
+
+        // Random chain length between 2-5
+        const chainLength = Math.floor(Math.random() * 4) + 2;
+        triggerChainReaction(obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, chainLength - 1);
+
+        return false;
+      }
+    }
+
+    return true;
+  });
 }
 
 // Show game over screen
@@ -884,3 +1050,48 @@ function startGame() {
 }
 
 startGame();
+
+// Add this new function to handle powerup effects
+function applyPowerup(type) {
+  switch (type) {
+    case 'shield':
+      player.shield = true;
+      shieldEndTime = Date.now() + shieldDuration;
+      // Create a shield activation effect
+      explosions.push(new CollisionAnimation(ctx, player.x, player.y + player.height / 2, player.width * 0.75));
+      break;
+    case 'rapidFire':
+      player.rapidFire = true;
+      projectile.cooldownTime = 250; // 0.5 seconds
+      setTimeout(() => {
+        player.rapidFire = false;
+        projectile.cooldownTime = 1500; // Reset to original cooldown
+      }, 10000); // 10 seconds
+      break;
+  }
+}
+
+// Add these functions to draw powerup indicators
+function drawPowerupIndicators() {
+  const indicatorSize = 20;
+  const margin = 5;
+  let offsetY = 60;
+
+  if (player.shield) {
+    drawPowerupIndicator('Shield', 'rgba(0, 255, 255, 0.8)', offsetY);
+    offsetY += indicatorSize + margin;
+  }
+  if (player.rapidFire) {
+    drawPowerupIndicator('Rapid Fire', 'rgba(255, 0, 0, 0.8)', offsetY);
+  }
+}
+
+function drawPowerupIndicator(text, color, offsetY) {
+  const indicatorSize = 20;
+  ctx.fillStyle = color;
+  ctx.fillRect(10, offsetY, indicatorSize, indicatorSize);
+  ctx.fillStyle = 'white';
+  ctx.font = '12px Arial';
+  ctx.fillText(text, 35, offsetY + 15);
+}
+
