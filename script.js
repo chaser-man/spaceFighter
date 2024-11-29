@@ -127,6 +127,7 @@ class Obstacle {
     this.y = y;
     this.size = size;
     this.speed = speed;
+    this.dx = 0; // Add horizontal speed
     this.rotation = 0;
     this.rotationSpeed = rotationSpeed;
     this.vertices = this.createAsteroidShape();
@@ -228,6 +229,7 @@ class Obstacle {
   }
 
   update() {
+    this.x += this.dx; // Update x position
     this.y += this.speed;
     this.rotation += this.rotationSpeed;
   }
@@ -351,10 +353,10 @@ class Powerup {
   draw() {
     ctx.save();
     ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-    
+
     this.drawOuterCircle();
     this.drawInnerShape();
-    
+
     ctx.restore();
   }
 
@@ -362,7 +364,7 @@ class Powerup {
     ctx.beginPath();
     ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
     const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width / 2);
-    
+
     if (this.type === 'shield') {
       gradient.addColorStop(0, 'rgba(0, 255, 255, 0.8)');
       gradient.addColorStop(1, 'rgba(0, 150, 255, 0.4)');
@@ -370,7 +372,7 @@ class Powerup {
       gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
       gradient.addColorStop(1, 'rgba(255, 100, 0, 0.4)');
     }
-    
+
     ctx.fillStyle = gradient;
     ctx.fill();
   }
@@ -438,6 +440,9 @@ function triggerChainReaction(startX, startY, remainingChain = 4, hitAsteroids =
   const nearest = findNearestAsteroid(startX, startY, hitAsteroids);
 
   if (!nearest) return;
+
+  // Increment score for chain reaction hit
+  score++;
 
   // Draw connecting line
   chainLines.push({
@@ -661,29 +666,80 @@ function updatePlayer() {
   }
 }
 
-// Spawn obstacles
+let spawnInterval = null; // Add this variable to track the spawn interval
+let powerupInterval = null; // Add this variable to track powerup spawns
+
 function spawnObstacles() {
+  // Clear any existing spawn interval
+  if (spawnInterval) {
+    clearTimeout(spawnInterval);
+    spawnInterval = null;
+  }
+
   if (gameOver) return;
 
   const cappedScore = Math.min(score, maxDifficultyScore);
 
-  const numObstacles = Math.min(1 + Math.floor(cappedScore / 10), maxObstacles);
+  // Only spawn obstacles if the boss is not active
+  if (!(currentBoss && currentBoss.active)) {
+    const numObstacles = Math.min(1 + Math.floor(cappedScore / 10), maxObstacles);
 
-  for (let i = 0; i < numObstacles; i++) {
-    spawnObstacle(cappedScore);
+    for (let i = 0; i < numObstacles; i++) {
+      spawnObstacle(cappedScore);
+    }
+
+    // Only set up next spawn if boss isn't active
+    const spawnDelay = Math.max(300, 1000 - cappedScore * 20);
+    spawnInterval = setTimeout(spawnObstacles, spawnDelay);
   }
+}
 
-  // Spawn powerups with a 30% chance
-  if (Math.random() < 0.2) {
+// Separate function for powerup spawning
+function spawnPowerups() {
+  if (gameOver) return;
+
+  // Spawn powerups with a 10% chance (reduced from 20%)
+  if (Math.random() < 0.1) {
     const powerupTypes = ['shield', 'rapidFire'];
     const randomType = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
     const x = Math.random() * (canvas.width - 30);
     powerups.push(new Powerup(x, -30, randomType));
   }
 
-  const spawnDelay = Math.max(300, 1000 - cappedScore * 20);
+  // Set up next powerup spawn
+  powerupInterval = setTimeout(spawnPowerups, 1000); // Check every second
+}
 
-  setTimeout(spawnObstacles, spawnDelay);
+// Modify startGame to include powerup spawning
+function startGame() {
+  createStars();
+  spawnObstacles();
+  spawnPowerups(); // Start powerup spawning
+
+  const bossCheckInterval = setInterval(() => {
+    if (!gameOver) {
+        // Show boss warning at score 25
+        if (score >= 25 && !bossWarningShown) {
+            showingBossWarning = true;
+            bossWarningTimer = 180; // 3 seconds at 60fps
+            bossWarningShown = true;
+        }
+
+        // Spawn boss at score 30
+        if (score >= 30 && !currentBoss && !bossDefeated) {
+            currentBoss = new Boss();
+            obstacles = []; // Clear existing obstacles
+        }
+    } else {
+        clearInterval(bossCheckInterval);
+        clearTimeout(powerupInterval);
+    }
+  }, 1000);
+
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  gameLoop();
 }
 
 function spawnObstacle(cappedScore) {
@@ -742,6 +798,442 @@ function detectCollision(player, obstacle) {
 
   return false;
 }
+
+// Add boss class
+class Boss {
+  constructor() {
+    this.width = 150;
+    this.height = 150;
+    this.size = 150; // Added for consistency with Obstacle class
+    this.x = canvas.width / 2 - this.width / 2;
+    this.y = -this.height;
+    this.health = 100;
+    this.maxHealth = 100;
+    this.speed = 2;
+    this.phase = 'entering';
+    this.phaseTimer = 0;
+    this.active = true;
+    this.rotation = 0;
+    this.rotationSpeed = 0.005;
+    this.streamTimer = 0;
+    this.isStreaming = false;
+    this.damageTaken = 0; // Track damage for healing
+    this.teleportCooldown = 1500; // 1.5 seconds between teleports
+    this.lastTeleportTime = 0;
+    this.fastShotChance = 0.1; // 10% chance for fast shot during regular attacks
+    this.opacity = 1; // Added for fade-in/fade-out animation
+
+    // Generate asteroid-like shape
+    this.vertices = this.createAsteroidShape();
+    this.craters = this.createCraters();
+    this.spots = this.createSpots();
+
+    this.attackPatterns = [
+      'spiral', // Shoots asteroids in a spiral pattern
+      'burst',  // Rapid burst of asteroids in player's direction
+      'cross'   // Cross-shaped pattern of asteroids
+    ];
+    this.currentPattern = 'spiral';
+  }
+
+  // Copy asteroid shape generation methods from Obstacle class
+  createAsteroidShape() {
+    const points = [];
+    const numVertices = Math.floor(Math.random() * 5) + 7;
+    for (let i = 0; i < numVertices; i++) {
+      const angle = (i / numVertices) * Math.PI * 2;
+      const radius = (this.size / 2) * (0.7 + Math.random() * 0.6);
+      points.push({
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle)
+      });
+    }
+    return points;
+  }
+
+  createCraters() {
+    const craters = [];
+    const numCraters = Math.floor(Math.random() * 5) + 4; // More craters than regular asteroids
+    for (let i = 0; i < numCraters; i++) {
+      const craterX = (Math.random() - 0.5) * this.size * 0.6;
+      const craterY = (Math.random() - 0.5) * this.size * 0.6;
+      const craterRadius = this.size * 0.1 * (0.5 + Math.random() * 0.5);
+      craters.push({ x: craterX, y: craterY, radius: craterRadius });
+    }
+    return craters;
+  }
+
+  createSpots() {
+    const spots = [];
+    const numSpots = Math.floor(Math.random() * 7) + 8; // More spots than regular asteroids
+    for (let i = 0; i < numSpots; i++) {
+      const spotX = (Math.random() - 0.5) * this.size * 0.8;
+      const spotY = (Math.random() - 0.5) * this.size * 0.8;
+      const spotRadius = this.size * 0.02 * (0.5 + Math.random() * 0.5);
+      spots.push({ x: spotX, y: spotY, radius: spotRadius });
+    }
+    return spots;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
+    ctx.rotate(this.rotation);
+    ctx.globalAlpha = this.opacity; // Apply opacity for fade-in/fade-out animation
+
+    // Create red-hued gradient
+    const gradient = ctx.createRadialGradient(
+      -this.size * 0.2, -this.size * 0.2, this.size * 0.2,
+      0, 0, this.size
+    );
+    gradient.addColorStop(0, '#ff4444');
+    gradient.addColorStop(0.5, '#cc0000');
+    gradient.addColorStop(1, '#800000');
+
+    // Draw main body
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+    for (let point of this.vertices) {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw craters with red hues
+    for (let crater of this.craters) {
+      ctx.beginPath();
+      ctx.arc(crater.x, crater.y, crater.radius, 0, Math.PI * 2);
+      const craterGradient = ctx.createRadialGradient(
+        crater.x - crater.radius * 0.3, crater.y - crater.radius * 0.3, crater.radius * 0.1,
+        crater.x, crater.y, crater.radius
+      );
+      craterGradient.addColorStop(0, 'rgba(255, 0, 0, 0.4)');
+      craterGradient.addColorStop(1, 'rgba(100, 0, 0, 0.2)');
+      ctx.fillStyle = craterGradient;
+      ctx.fill();
+    }
+
+    // Draw spots with darker red
+    for (let spot of this.spots) {
+      ctx.beginPath();
+      ctx.arc(spot.x, spot.y, spot.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(100, 0, 0, 0.3)';
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Draw health bar
+    const healthBarWidth = 200;
+    const healthBarHeight = 20;
+    const healthBarX = (canvas.width - healthBarWidth) / 2;
+    const healthBarY = 50;
+
+    ctx.fillStyle = '#333';
+    ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+    ctx.fillStyle = '#ff0000';
+    const currentHealthWidth = (this.health / this.maxHealth) * healthBarWidth;
+    ctx.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
+    ctx.strokeStyle = '#fff';
+    ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+  }
+
+  update() {
+    this.rotation += this.rotationSpeed;
+
+    // Handle streaming attack if active
+    if (this.isStreaming) {
+      this.streamTimer--;
+      if (this.streamTimer % 5 === 0) { // Fire every 5 frames for dense pattern
+        this.shootStreamPattern();
+      }
+      if (this.streamTimer <= 0) {
+        this.isStreaming = false;
+      }
+    }
+
+    switch (this.phase) {
+      case 'entering':
+        if (this.y < 50) {
+          this.y += this.speed;
+        } else {
+          this.phase = 'phase1';
+          this.phaseTimer = 120;
+        }
+        break;
+
+      case 'phase1':
+        this.x += Math.sin(Date.now() / 1000) * 3;
+        this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+
+        if (this.phaseTimer % 50 === 0) {
+          if (Math.random() < this.fastShotChance) {
+            this.shootFastShot();
+          } else if (Math.random() < 0.2 && !this.isStreaming) {
+            this.isStreaming = true;
+            this.streamTimer = 75;
+          } else {
+            this.shootPattern1();
+          }
+        }
+
+        this.phaseTimer--;
+        if (this.phaseTimer <= 0) {
+          this.phase = 'resting';
+          this.phaseTimer = 60;
+        }
+        break;
+
+      case 'phase2':
+        this.x += Math.cos(Date.now() / 500) * 5;
+        this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+
+        if (this.phaseTimer % 30 === 0) {
+          if (Math.random() < this.fastShotChance) {
+            this.shootFastShot();
+          } else if (Math.random() < 0.3 && !this.isStreaming) {
+            this.isStreaming = true;
+            this.streamTimer = 75;
+          } else {
+            this.shootPattern2();
+          }
+        }
+
+        this.phaseTimer--;
+        if (this.phaseTimer <= 0) {
+          this.phase = 'resting';
+          this.phaseTimer = 60;
+        }
+        break;
+
+      case 'resting':
+        if (this.damageTaken > 0) {
+          // Heal 25% of damage taken
+          const healAmount = Math.ceil(this.damageTaken * 0.25);
+          this.heal(healAmount);
+          this.damageTaken = 0; // Reset damage tracker
+        }
+        
+        this.phaseTimer--;
+        if (this.phaseTimer <= 0) {
+          this.phase = this.health > this.maxHealth / 2 ? 'phase1' : 'phase2';
+          this.phaseTimer = 120;
+        }
+        break;
+    }
+
+    // Check for player proximity
+    const distanceToPlayer = Math.hypot(
+      (player.x - this.x - this.width/2),
+      (player.y - this.y - this.height/2)
+    );
+
+    const canTeleport = Date.now() - this.lastTeleportTime >= this.teleportCooldown;
+    
+    // Always teleport when player gets too close (if cooldown allows)
+    if (distanceToPlayer < 150 && canTeleport) {
+      this.teleport();
+    }
+  }
+
+  shootStreamPattern() {
+    const asteroidSize = 25;
+    const spacing = asteroidSize + 10; // Increase spacing between asteroids
+    
+    // Create three parallel streams
+    for (let i = -1; i <= 1; i++) {
+      const offset = i * spacing * 2;
+      
+      obstacles.push(new Obstacle(
+        this.x + this.width / 2 + offset,
+        this.y + this.height,
+        asteroidSize,
+        4,
+        0.02
+      ));
+      
+      obstacles[obstacles.length - 1].dx = offset * 0.05;
+    }
+  }
+
+  shootPattern1() {
+    // Modify to include different patterns
+    switch(this.currentPattern) {
+      case 'spiral':
+        this.shootSpiral();
+        break;
+      case 'burst':
+        this.shootBurst();
+        break;
+      case 'cross':
+        this.shootCross();
+        break;
+    }
+    // Randomly change pattern
+    if (Math.random() < 0.2) {
+      this.currentPattern = this.attackPatterns[Math.floor(Math.random() * this.attackPatterns.length)];
+    }
+  }
+
+  shootSpiral() {
+    const angleStep = Math.PI * 2 / 8;
+    for (let i = 0; i < 8; i++) {
+      const angle = angleStep * i + this.rotation;
+      const speed = 4;
+      const dx = Math.cos(angle) * speed;
+      const dy = Math.sin(angle) * speed;
+      
+      obstacles.push(new Obstacle(
+        this.x + this.width/2,
+        this.y + this.height,
+        25,
+        dy,
+        0.02
+      ));
+      obstacles[obstacles.length - 1].dx = dx;
+    }
+  }
+
+  shootBurst() {
+    const angle = Math.atan2(player.y - this.y, player.x - this.x);
+    for (let i = -2; i <= 2; i++) {
+      const speed = 6;
+      const spreadAngle = angle + (i * Math.PI / 12);
+      const dx = Math.cos(spreadAngle) * speed;
+      const dy = Math.sin(spreadAngle) * speed;
+      
+      obstacles.push(new Obstacle(
+        this.x + this.width/2,
+        this.y + this.height,
+        20,
+        dy,
+        0.02
+      ));
+      obstacles[obstacles.length - 1].dx = dx;
+    }
+  }
+
+  shootCross() {
+    const directions = [[1,0], [-1,0], [0,1], [0,-1]];
+    directions.forEach(([dx, dy]) => {
+      obstacles.push(new Obstacle(
+        this.x + this.width/2,
+        this.y + this.height,
+        30,
+        dy * 4,
+        0.02
+      ));
+      obstacles[obstacles.length - 1].dx = dx * 4;
+    });
+  }
+
+  shootPattern2() {
+    // Shoot 3 asteroids diagonally towards the player
+    for (let i = -1; i <= 1; i++) {
+      const angle = Math.atan2(player.y - (this.y + this.height), player.x - (this.x + this.width / 2)) + i * Math.PI / 6;
+      const speed = 4;
+      const dx = Math.cos(angle) * speed;
+      const dy = Math.sin(angle) * speed;
+
+      obstacles.push(new Obstacle(
+        this.x + this.width / 2,
+        this.y + this.height,
+        30,
+        dy,
+        0.02
+      ));
+      obstacles[obstacles.length - 1].dx = dx; // Add horizontal speed
+    }
+  }
+
+  shootFastShot() {
+    const angle = Math.atan2(
+      player.y - (this.y + this.height),
+      player.x - (this.x + this.width / 2)
+    );
+    const speed = 12; // Much faster than normal asteroids
+
+    obstacles.push(new Obstacle(
+      this.x + this.width / 2,
+      this.y + this.height,
+      20, // Slightly smaller size
+      speed * Math.sin(angle),
+      0.02
+    ));
+    obstacles[obstacles.length - 1].dx = speed * Math.cos(angle); // Set horizontal speed
+  }
+
+  heal(amount) {
+    this.health = Math.min(this.maxHealth, this.health + amount);
+  }
+
+  takeDamage(amount) {
+    this.health -= amount;
+    this.damageTaken += amount;
+
+    // 50% chance to teleport when hit if cooldown allows
+    const canTeleport = Date.now() - this.lastTeleportTime >= this.teleportCooldown;
+    if (canTeleport && Math.random() < 0.5) {
+      this.teleport();
+    }
+
+    if (this.health <= 0) {
+      this.active = false;
+      explosions.push(new CollisionAnimation(
+        ctx,
+        this.x + this.width / 2,
+        this.y + this.height / 2,
+        this.width
+      ));
+      score += 30; // Award 30 points for defeating the boss
+      setTimeout(() => {
+        spawnObstacles();
+      }, 2000);
+    }
+  }
+
+  teleport() {
+    // Store target position
+    const maxY = canvas.height * 0.3;
+    const minY = 50;
+    const targetX = Math.random() * (canvas.width - this.width);
+    const targetY = minY + Math.random() * (maxY - minY);
+
+    // Fade out animation
+    const fadeOut = setInterval(() => {
+      this.opacity -= 0.1;
+      if (this.opacity <= 0) {
+        clearInterval(fadeOut);
+        // Move to new position when fully faded out
+        this.x = targetX;
+        this.y = targetY;
+        // Start fade in
+        const fadeIn = setInterval(() => {
+          this.opacity += 0.1;
+          if (this.opacity >= 1) {
+            clearInterval(fadeIn);
+          }
+        }, 20);
+      }
+    }, 20);
+
+    this.lastTeleportTime = Date.now();
+  }
+}
+
+// Add boss-related variables
+let currentBoss = null;
+let bossDefeated = false;
+
+// Add warning state variable
+let bossWarningShown = false;
+let showingBossWarning = false;
+let bossWarningTimer = 0;
 
 // Game loop
 function gameLoop() {
@@ -827,7 +1319,7 @@ function gameLoop() {
   });
 
   // Remove magnet effect code
-  
+
   // Draw shield if active
   if (player.shield) {
     ctx.beginPath();
@@ -837,15 +1329,42 @@ function gameLoop() {
     ctx.stroke();
   }
 
+  if (currentBoss && currentBoss.active) {
+    currentBoss.update();
+    currentBoss.draw();
+  } else if (currentBoss && !currentBoss.active) {
+    currentBoss = null;
+    bossDefeated = true;
+    // Resume normal obstacle spawning
+    spawnObstacles();
+  }
+
   ctx.fillStyle = '#fff';
   ctx.font = '20px Arial';
   ctx.fillText('Score: ' + score, 10, 30);
+
+  // Draw boss warning
+  if (showingBossWarning) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 0, 0, ' + (Math.sin(Date.now() / 100) * 0.3 + 0.7) + ')';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('BOSS INCOMING', canvas.width / 2, canvas.height / 2);
+    ctx.restore();
+
+    bossWarningTimer--;
+    if (bossWarningTimer <= 0) {
+      showingBossWarning = false;
+    }
+  }
 
   requestAnimationFrame(gameLoop);
 }
 
 // Draw cooldown indicator
 function drawCooldownIndicator() {
+  if (player.rapidFire) return; // No cooldown indicator during rapid fire
+
   const timeElapsed = Date.now() - projectile.lastShotTime;
   const progress = timeElapsed / projectile.cooldownTime;
 
@@ -944,13 +1463,15 @@ function shootProjectile() {
     speed: 10
   });
 
-  projectile.canShoot = false;
-  projectile.lastShotTime = Date.now();
+  if (!player.rapidFire) {
+    projectile.canShoot = false;
+    projectile.lastShotTime = Date.now();
 
-  // Start cooldown
-  setTimeout(() => {
-    projectile.canShoot = true;
-  }, player.rapidFire ? 250 : projectile.cooldownTime);
+    // Start cooldown
+    setTimeout(() => {
+      projectile.canShoot = true;
+    }, projectile.cooldownTime);
+  }
 }
 
 // Modify the drawProjectile function
@@ -970,12 +1491,27 @@ function updateProjectiles() {
       return false;
     }
 
+    // Check for boss collision
+    if (currentBoss && currentBoss.active) {
+      if (proj.x >= currentBoss.x &&
+          proj.x <= currentBoss.x + currentBoss.width &&
+          proj.y >= currentBoss.y &&
+          proj.y <= currentBoss.y + currentBoss.height) {
+        currentBoss.takeDamage(10);
+        explosions.push(new CollisionAnimation(ctx, proj.x, proj.y, 20));
+        return false;
+      }
+    }
+
     for (let i = 0; i < obstacles.length; i++) {
       const obstacle = obstacles[i];
       if (proj.x >= obstacle.x &&
-          proj.x <= obstacle.x + obstacle.size &&
-          proj.y >= obstacle.y &&
-          proj.y <= obstacle.y + obstacle.size) {
+        proj.x <= obstacle.x + obstacle.size &&
+        proj.y >= obstacle.y &&
+        proj.y <= obstacle.y + obstacle.size) {
+
+        // Increment score for direct hit
+        score++;
 
         // Start chain reaction from hit asteroid
         explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, obstacle.size / 2));
@@ -1034,12 +1570,25 @@ function showGameOver() {
 function startGame() {
   createStars();
   spawnObstacles();
+  spawnPowerups();
 
-  const scoreInterval = setInterval(() => {
+  const bossCheckInterval = setInterval(() => {
     if (!gameOver) {
-      score++;
+        // Show boss warning at score 25
+        if (score >= 25 && !bossWarningShown) {
+            showingBossWarning = true;
+            bossWarningTimer = 180; // 3 seconds at 60fps
+            bossWarningShown = true;
+        }
+
+        // Spawn boss at score 30
+        if (score >= 30 && !currentBoss && !bossDefeated) {
+            currentBoss = new Boss();
+            obstacles = []; // Clear existing obstacles
+        }
     } else {
-      clearInterval(scoreInterval);
+        clearInterval(bossCheckInterval);
+        clearTimeout(powerupInterval);
     }
   }, 1000);
 
@@ -1048,7 +1597,6 @@ function startGame() {
 
   gameLoop();
 }
-
 startGame();
 
 // Add this new function to handle powerup effects
@@ -1062,10 +1610,8 @@ function applyPowerup(type) {
       break;
     case 'rapidFire':
       player.rapidFire = true;
-      projectile.cooldownTime = 250; // 0.5 seconds
       setTimeout(() => {
         player.rapidFire = false;
-        projectile.cooldownTime = 1500; // Reset to original cooldown
       }, 10000); // 10 seconds
       break;
   }
