@@ -45,6 +45,7 @@ const player = {
   shield: false,
   rapidFire: false,
   magnet: false,
+  invincible: false, // Adds invincibility frames
 
   // Function to return the hitboxes
   getHitboxes() {
@@ -638,6 +639,17 @@ function drawPlayer() {
       ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
       ctx.lineWidth = 5;
       ctx.stroke();
+    }
+    // Indication for invincibility frames
+  if (player.invincible) {
+    ctx.save();
+    // Draw a white flashing outline (this example uses a simple circle)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y + player.height / 2, player.width * 0.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
     }
   }
 }
@@ -1263,18 +1275,37 @@ function gameLoop() {
     }
 
     if (detectCollision(player, obstacle)) {
-      if (player.shield) {
-        // Shield was used, remove the obstacle and deactivate shield
-        explosions.push(new CollisionAnimation(ctx, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2, obstacle.size / 2));
-        player.shield = false;
-        shieldEndTime = 0;
-        return false;
-      } else {
-        gameOver = true;
-        showGameOver();
-        return false;
-      }
-    }
+  if (player.invincible) {
+    // When invincible, simply remove the obstacle and (optionally) add an explosion.
+    explosions.push(new CollisionAnimation(
+      ctx,
+      obstacle.x + obstacle.size / 2,
+      obstacle.y + obstacle.size / 2,
+      obstacle.size / 2
+    ));
+    return false;
+  } else if (player.shield) {
+    // Shield is active: remove the obstacle, play an explosion, and enable invincibility frames.
+    explosions.push(new CollisionAnimation(
+      ctx,
+      obstacle.x + obstacle.size / 2,
+      obstacle.y + obstacle.size / 2,
+      obstacle.size / 2
+    ));
+    player.shield = false;
+    shieldEndTime = 0;
+    player.invincible = true; // Turn on invincibility
+    setTimeout(() => {
+      player.invincible = false;
+    }, 1000); // Invincibility lasts 1000 ms (adjust as needed)
+    return false;
+  } else {
+    gameOver = true;
+    showGameOver();
+    return false;
+  }
+}
+
 
     return true;
   });
