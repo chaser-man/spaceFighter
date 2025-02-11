@@ -506,7 +506,7 @@ function drawPlayer() {
   ctx.fill();
 
   ctx.restore();
-}
+  
   // Fins
   const finWidth = player.width * 0.3;
   const finHeight = player.height * 0.3;
@@ -662,6 +662,7 @@ function drawPlayer() {
     }
   }
 }
+
 
 // Update player position
 function updatePlayer() {
