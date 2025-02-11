@@ -1,4 +1,3 @@
-// Sigma
 // Get the canvas and context
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -639,14 +638,7 @@ function drawPlayer() {
         ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
         ctx.lineWidth = 5;
         ctx.stroke();
-      }
-    } else {
-      // Draw normal shield
-      ctx.beginPath();
-      ctx.arc(player.x, player.y + player.height / 2, player.width * 0.75, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-      ctx.lineWidth = 5;
-      ctx.stroke();
+      } 
     }
   }
 }
