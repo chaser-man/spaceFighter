@@ -718,38 +718,6 @@ function spawnPowerups() {
   powerupInterval = setTimeout(spawnPowerups, 1000); // Check every second
 }
 
-// Modify startGame to include powerup spawning
-function startGame() {
-  createStars();
-  spawnObstacles();
-  spawnPowerups(); // Start powerup spawning
-
-  const bossCheckInterval = setInterval(() => {
-    if (!gameOver) {
-        // Show boss warning at score 25
-        if (score >= 25 && !bossWarningShown) {
-            showingBossWarning = true;
-            bossWarningTimer = 180; // 3 seconds at 60fps
-            bossWarningShown = true;
-        }
-
-        // Spawn boss at score 30
-        if (score >= 30 && !currentBoss && !bossDefeated) {
-            currentBoss = new Boss();
-            obstacles = []; // Clear existing obstacles
-        }
-    } else {
-        clearInterval(bossCheckInterval);
-        clearTimeout(powerupInterval);
-    }
-  }, 1000);
-
-  window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyUp);
-
-  gameLoop();
-}
-
 function spawnObstacle(cappedScore) {
   let size = Math.random() * (50 - 30) + 30;
   const x = Math.random() * (canvas.width - size);
