@@ -647,22 +647,8 @@ function drawPlayer() {
       ctx.lineWidth = 5;
       ctx.stroke();
     }
-    // Indication for invincibility frames
-    if (player.invincible) {
-      ctx.save();
-  // Make the outline flash by alternating visibility every 200ms
-      if (Math.floor(Date.now() / 200) % 2 === 0) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(player.x, player.y + player.height / 2, player.width * 0.8, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
   }
 }
-
 
 // Update player position
 function updatePlayer() {
