@@ -473,6 +473,12 @@ function triggerChainReaction(startX, startY, remainingChain = 4, hitAsteroids =
 function drawPlayer() {
   ctx.save();
 
+  // Make player blink when invincible
+  if (player.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
+    ctx.restore();
+    return; // Skip drawing this frame
+  }
+  
   // Main body
   ctx.beginPath();
   ctx.moveTo(player.x, player.y);
@@ -500,6 +506,8 @@ function drawPlayer() {
   ctx.fillStyle = gradient;
   ctx.fill();
 
+  ctx.restore();
+}
   // Fins
   const finWidth = player.width * 0.3;
   const finHeight = player.height * 0.3;
