@@ -475,10 +475,9 @@ function drawPlayer() {
 
   // Make player blink when invincible
   if (player.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
-    ctx.restore();
-    return; // Skip drawing this frame
+    return; // Skip drawing this frame without restoring early
   }
-  
+
   // Main body
   ctx.beginPath();
   ctx.moveTo(player.x, player.y);
