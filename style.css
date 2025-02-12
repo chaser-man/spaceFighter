@@ -3,13 +3,14 @@ body {
   margin: 0;
   overflow: hidden;
   /* Prevent scrolling */
-  background-color: pink;
+  background-color: black;
   touch-action: none;
   /* Prevent touch gestures like zooming */
 }
 
 /* Style for the game canvas */
 #gameCanvas {
+  background-color: pink;
   display: block;
   touch-action: none;
   /* Prevent touch gestures on the canvas */
