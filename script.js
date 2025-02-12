@@ -1230,7 +1230,6 @@ function gameLoop() {
       obstacle.size / 2
     ));
     player.shield = false;
-    shieldEndTime = 0;
     player.invincible = true; // Turn on invincibility
     setTimeout(() => {
       player.invincible = false;
@@ -1572,7 +1571,6 @@ function applyPowerup(type) {
   switch (type) {
     case 'shield':
       player.shield = true;
-      shieldEndTime = Date.now() + shieldDuration;
       // Create a shield activation effect
       explosions.push(new CollisionAnimation(ctx, player.x, player.y + player.height / 2, player.width * 0.75));
       break;
