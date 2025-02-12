@@ -113,11 +113,6 @@ let chainLines = [];
 // Powerups array
 let powerups = [];
 
-// Add these variables to your global scope
-let shieldEndTime = 0;
-const shieldDuration = 10000; // 10 seconds
-const shieldWarningTime = 3000; // Start flashing 3 seconds before end
-
 // Replace the single projectile object with an array of projectiles
 let projectiles = [];
 
@@ -625,21 +620,6 @@ function drawPlayer() {
     ctx.lineTo(player.x + player.width * 0.4, player.y + player.height * 0.85);
     ctx.closePath();
     ctx.stroke();
-  }
-
-  // Draw shield if active
-  if (player.shield) {
-    const timeLeft = shieldEndTime - Date.now();
-    if (timeLeft <= shieldWarningTime) {
-      // Flash the shield
-      if (Math.floor(Date.now() / 100) % 2 === 0) {
-        ctx.beginPath();
-        ctx.arc(player.x, player.y + player.height / 2, player.width * 0.75, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-        ctx.lineWidth = 5;
-        ctx.stroke();
-      } 
-    }
   }
 }
 
