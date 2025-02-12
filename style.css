@@ -3,7 +3,7 @@ body {
   margin: 0;
   overflow: hidden;
   /* Prevent scrolling */
-  background-color: black;
+  background-color: pink;
   touch-action: none;
   /* Prevent touch gestures like zooming */
 }
