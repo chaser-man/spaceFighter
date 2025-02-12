@@ -1430,15 +1430,14 @@ function shootProjectile() {
     speed: 10
   });
 
-  if (!player.rapidFire) {
-    projectile.canShoot = false;
-    projectile.lastShotTime = Date.now();
+  projectile.canShoot = false;
+  projectile.lastShotTime = Date.now();
 
-    // Start cooldown
-    setTimeout(() => {
-      projectile.canShoot = true;
-    }, projectile.cooldownTime);
-  }
+  let fireRate = player.rapidFire ? 100 : projectile.cooldownTime; // Rapid fire shoots every 100ms
+
+  setTimeout(() => {
+    projectile.canShoot = true;
+  }, fireRate);
 }
 
 // Modify the drawProjectile function
