@@ -1566,17 +1566,24 @@ function startGame() {
 startGame();
 
 // Add this new function to handle powerup effects
+let rapidFireTimeout = null; // Store the timeout ID globally
+
 function applyPowerup(type) {
   switch (type) {
     case 'shield':
       player.shield = true;
-      // Create a shield activation effect
       explosions.push(new CollisionAnimation(ctx, player.x, player.y + player.height / 2, player.width * 0.75));
       break;
     case 'rapidFire':
       player.rapidFire = true;
-      setTimeout(() => {
+      
+      // Reset the existing timer if it's active
+      if (rapidFireTimeout) clearTimeout(rapidFireTimeout);
+      
+      // Start a new timer
+      rapidFireTimeout = setTimeout(() => {
         player.rapidFire = false;
+        rapidFireTimeout = null; // Clear the stored timeout ID
       }, 10000); // 10 seconds
       break;
   }
