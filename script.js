@@ -1491,8 +1491,16 @@ function updateProjectiles() {
     }
 
     // Check for collisions with obstacles or boss
-    // ... (existing collision logic remains unchanged)
-
+    for (let i = 0; i < obstacles.length; i++) {
+      const obstacle = obstacles[i];
+      if (proj.x >= obstacle.x &&
+          proj.x <= obstacle.x + obstacle.size &&
+          proj.y >= obstacle.y &&
+          proj.y <= obstacle.y + obstacle.size) {
+        obstacles.splice(i, 1);
+        return false;
+      }
+    }
     return true;
   });
 }
@@ -1504,10 +1512,13 @@ function updateProjectiles() {
           proj.y >= currentBoss.y &&
           proj.y <= currentBoss.y + currentBoss.height) {
         currentBoss.takeDamage(10);
-        explosions.push(new CollisionAnimation(ctx, proj.x, proj.y, 20));
         return false;
       }
     }
+
+    return true;
+  });
+}
 
     for (let i = 0; i < obstacles.length; i++) {
       const obstacle = obstacles[i];
