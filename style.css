@@ -10,7 +10,7 @@ body {
 
 /* Style for the game canvas */
 #gameCanvas {
-  background-color: pink;
+  /*background-color: pink;*/
   display: block;
   touch-action: none;
   /* Prevent touch gestures on the canvas */
