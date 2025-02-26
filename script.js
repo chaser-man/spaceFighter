@@ -1331,7 +1331,10 @@ function gameLoop() {
     }
     ));
     gameOver = true;
-    showGameOver();
+    setTimeout(() => {
+      showGameOver();
+    }, 800);
+    
     return false;
   }
 }
