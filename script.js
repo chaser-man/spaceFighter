@@ -46,7 +46,6 @@ const player = {
   rapidFire: false,
   magnet: false,
   invincible: false, // Adds invincibility frames
-  opacity: 1,
 
   // Function to return the hitboxes
   getHitboxes() {
@@ -467,10 +466,8 @@ function triggerChainReaction(startX, startY, remainingChain = 4, hitAsteroids =
 
 // Draw player function
 function drawPlayer() {
-  if (player.opacity <= 0) return;
-  
   ctx.save();
-  ctx.globalAlpha = player.opacity;
+
   // Make player blink when invincible
   if (player.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
     return; // Skip drawing this frame without restoring early
@@ -624,7 +621,6 @@ function drawPlayer() {
     ctx.closePath();
     ctx.stroke();
   }
-  ctx.restore();
 }
 
 // Update player position
@@ -1190,16 +1186,8 @@ let bossWarningTimer = 0;
 
 // Game loop
 function gameLoop() {
-  if (gameOver) {
-    if(player.opacity > 0) {
-      player.opacity -= 0.02;
-    } else {
-      showGameOver();
-      return;
-    }
-  } 
-  requestAnimationFrame(gameLoop);
-  
+  if (gameOver) return;
+
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
