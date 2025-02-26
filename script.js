@@ -1,3 +1,4 @@
+let activeAnimations = [];
 // Get the canvas and context
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -31,6 +32,7 @@ window.addEventListener('resize', () => {
   canvas.height = window.innerHeight;
   player.y = canvas.height - 100 * sizeMultiplier;
 });
+
 
 // Player properties
 const player = {
@@ -83,6 +85,88 @@ const player = {
     return { rhombus, leftFin, rightFin };
   }
 };
+
+class DeathAnimation {
+  constructor(x, y, options = {}) {
+    // Position
+    this.x = x;
+    this.y = y;
+    
+    // Animation settings
+    this.type = options.type || 'fadeOut'; // 'fadeOut' or 'explosion'
+    this.duration = options.duration || 1000; // milliseconds
+    this.startTime = performance.now();
+    this.isComplete = false;
+    
+    // Appearance
+    this.radius = options.radius || 30;
+    this.color = options.color || 'red';
+    this.particleCount = options.particleCount || 20; // For explosion
+    
+    // For explosion animation
+    if (this.type === 'explosion') {
+      this.particles = [];
+      for (let i = 0; i < this.particleCount; i++) {
+        this.particles.push({
+          x: this.x,
+          y: this.y,
+          vx: (Math.random() - 0.5) * 5,
+          vy: (Math.random() - 0.5) * 5,
+          radius: Math.random() * 5 + 2,
+          alpha: 1
+        });
+      }
+    }
+  }
+  
+  update() {
+    const currentTime = performance.now();
+    const elapsedTime = currentTime - this.startTime;
+    const progress = Math.min(elapsedTime / this.duration, 1);
+    
+    if (progress >= 1) {
+      this.isComplete = true;
+      return;
+    }
+    
+    if (this.type === 'explosion') {
+      // Update particle positions and opacity
+      this.particles.forEach(particle => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.alpha = 1 - progress;
+      });
+    }
+  }
+  
+  draw(ctx) {
+    if (this.isComplete) return;
+    
+    const currentTime = performance.now();
+    const elapsedTime = currentTime - this.startTime;
+    const progress = Math.min(elapsedTime / this.duration, 1);
+    
+    if (this.type === 'fadeOut') {
+      // Draw fading circle
+      ctx.globalAlpha = 1 - progress;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (this.type === 'explosion') {
+      // Draw explosion particles
+      this.particles.forEach(particle => {
+        ctx.globalAlpha = particle.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+  }
+}
 
 // Projectile properties
 const projectile = {
@@ -1236,6 +1320,16 @@ function gameLoop() {
     }, 1000); // Invincibility lasts 1000 ms (adjust as needed)
     return false;
   } else {
+    activeAnimations.push(new DeathAnimation(
+    player.x, 
+    player.y, 
+    {
+      type: 'explosion',  // or 'fadeOut'
+      color: player.color || 'red', // Use player color or default
+      radius: player.radius || 30,  // Use player size or default
+      duration: 800                 // milliseconds
+    }
+    ));
     gameOver = true;
     showGameOver();
     return false;
@@ -1324,7 +1418,13 @@ function gameLoop() {
       showingBossWarning = false;
     }
   }
-
+  
+  activeAnimations = activeAnimations.filter(anim => !anim.isComplete);
+  activeAnimations.forEach(anim => {
+    anim.update();
+    anim.draw(ctx);
+    });
+  
   requestAnimationFrame(gameLoop);
 }
 
