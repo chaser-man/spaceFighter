@@ -93,7 +93,7 @@ class DeathAnimation {
     this.y = y;
     
     // Animation settings
-    this.type = options.type || 'fadeOut'; // 'fadeOut' or 'explosion'
+    this.type = options.type || 'explosion'; // 'fadeOut' or 'explosion'
     this.duration = options.duration || 1000; // milliseconds
     this.startTime = performance.now();
     this.isComplete = false;
