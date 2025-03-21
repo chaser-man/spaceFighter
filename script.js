@@ -707,28 +707,24 @@ function drawPlayer() {
   }
 }
 
-// Update player position
+// Update player position smoothly
 function updatePlayer() {
+  // Apply friction for gradual stopping
+  player.dx *= player.friction;
+  player.dy *= player.friction;
+
+  // Prevent tiny movements when almost stopped
+  if (Math.abs(player.dx) < 0.1) player.dx = 0;
+  if (Math.abs(player.dy) < 0.1) player.dy = 0;
+
+  // Move player
   player.x += player.dx;
   player.y += player.dy;
 
+  // Keep player within screen boundaries
   const finWidth = player.width * 0.4;
-
-  // Horizontal boundaries
-  if (player.x - player.width / 2 - finWidth < 0) {
-    player.x = player.width / 2 + finWidth;
-  }
-  if (player.x + player.width / 2 + finWidth > canvas.width) {
-    player.x = canvas.width - player.width / 2 - finWidth;
-  }
-
-  // Vertical boundaries
-  if (player.y < 0) {
-    player.y = 0;
-  }
-  if (player.y + player.height > canvas.height) {
-    player.y = canvas.height - player.height;
-  }
+  player.x = Math.max(player.width / 2 + finWidth, Math.min(canvas.width - player.width / 2 - finWidth, player.x));
+  player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
 }
 
 let spawnInterval = null; // Add this variable to track the spawn interval
@@ -1447,31 +1443,33 @@ function drawCooldownIndicator() {
   ctx.fillRect(10, 40, 100 * Math.min(progress, 1), 10);
 }
 
-// Handle key down
+// Movement properties
+player.acceleration = 0.5;  // How quickly the player accelerates
+player.maxSpeed = 7;        // Maximum speed
+player.friction = 0.9;      // Slowdown effect
+
+// Handle key down (accelerate player)
 function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
-    player.dx = player.speed;
+    player.dx += player.acceleration;
   } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-    player.dx = -player.speed;
-  }
-  else if (e.key === 'ArrowUp' || e.key === 'w') {
-    player.dy = -player.speed;
-  }
-  else if (e.key === 'ArrowDown' || e.key === 's') {
-    player.dy = player.speed;
-  }
-  else if (e.key === ' ' && projectile.canShoot) {
+    player.dx -= player.acceleration;
+  } else if (e.key === 'ArrowUp' || e.key === 'w') {
+    player.dy -= player.acceleration;
+  } else if (e.key === 'ArrowDown' || e.key === 's') {
+    player.dy += player.acceleration;
+  } else if (e.key === ' ' && projectile.canShoot) {
     shootProjectile();
   }
 }
 
-// Handle key up
+// Handle key up (apply friction)
 function handleKeyUp(e) {
-  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'ArrowLeft' || e.key === 'a') {
-    player.dx = 0;
+  if (['ArrowRight', 'd', 'ArrowLeft', 'a'].includes(e.key)) {
+    player.dx *= player.friction;  // Slow down horizontally
   }
-  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'ArrowDown' || e.key === 's') {
-    player.dy = 0;
+  if (['ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) {
+    player.dy *= player.friction;  // Slow down vertically
   }
 }
 
