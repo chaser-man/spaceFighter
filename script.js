@@ -707,19 +707,28 @@ function drawPlayer() {
   }
 }
 
-// Update player movement with optimized speed limiting
+// Update player movement with improved responsiveness
 function updatePlayer() {
-  // Apply speed limit before friction
-  player.dx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.dx));
-  player.dy = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.dy));
+  // Adjust speed based on active keys
+  if (keys['ArrowRight'] || keys['d']) {
+    player.dx = Math.min(player.dx + player.acceleration, player.maxSpeed);
+  } else if (keys['ArrowLeft'] || keys['a']) {
+    player.dx = Math.max(player.dx - player.acceleration, -player.maxSpeed);
+  } else {
+    player.dx *= player.friction; // Apply friction if no input
+  }
 
-  // Apply friction to slow down gradually
-  player.dx *= player.friction;
-  player.dy *= player.friction;
+  if (keys['ArrowUp'] || keys['w']) {
+    player.dy = Math.max(player.dy - player.acceleration, -player.maxSpeed);
+  } else if (keys['ArrowDown'] || keys['s']) {
+    player.dy = Math.min(player.dy + player.acceleration, player.maxSpeed);
+  } else {
+    player.dy *= player.friction; // Apply friction if no input
+  }
 
-  // Prevent tiny movement glitches
-  if (Math.abs(player.dx) < 0.3) player.dx = 0;
-  if (Math.abs(player.dy) < 0.3) player.dy = 0;
+  // Prevent micro-movement jitters
+  if (Math.abs(player.dx) < 0.5) player.dx = 0;
+  if (Math.abs(player.dy) < 0.5) player.dy = 0;
 
   // Move player
   player.x += player.dx;
@@ -1448,33 +1457,33 @@ function drawCooldownIndicator() {
 }
 
 // Improved movement properties
-player.acceleration = 2;    // Stronger acceleration for quicker response
-player.maxSpeed = 12;       // Faster max speed
-player.friction = 0.92;     // Slightly reduced friction for better momentum
+player.acceleration = 2.5;    // Even stronger acceleration for instant response
+player.maxSpeed = 14;        // Slightly increased top speed for faster movement
+player.friction = 0.95;      // Reduced friction for a more natural glide
 
-// Handle key down (accelerate player)
+// Movement keys state tracking
+const keys = {};
+
+// Handle key down (instant acceleration)
 function handleKeyDown(e) {
+  keys[e.key] = true;
+
   if (e.key === 'ArrowRight' || e.key === 'd') {
-    player.dx = Math.min(player.dx + player.acceleration, player.maxSpeed);
+    player.dx = player.acceleration; // Instant push instead of gradual build-up
   } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-    player.dx = Math.max(player.dx - player.acceleration, -player.maxSpeed);
+    player.dx = -player.acceleration;
   } else if (e.key === 'ArrowUp' || e.key === 'w') {
-    player.dy = Math.max(player.dy - player.acceleration, -player.maxSpeed);
+    player.dy = -player.acceleration;
   } else if (e.key === 'ArrowDown' || e.key === 's') {
-    player.dy = Math.min(player.dy + player.acceleration, player.maxSpeed);
+    player.dy = player.acceleration;
   } else if (e.key === ' ' && projectile.canShoot) {
     shootProjectile();
   }
 }
 
-// Handle key up (apply friction gradually)
+// Handle key up (apply smooth friction-based slowdown)
 function handleKeyUp(e) {
-  if (['ArrowRight', 'd', 'ArrowLeft', 'a'].includes(e.key)) {
-    player.dx *= player.friction;
-  }
-  if (['ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) {
-    player.dy *= player.friction;
-  }
+  keys[e.key] = false;
 }
 
 // Mobile controls
