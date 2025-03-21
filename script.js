@@ -707,25 +707,25 @@ function drawPlayer() {
   }
 }
 
-// Update player position smoothly
+// Update player movement with optimized speed limiting
 function updatePlayer() {
-  // Apply friction for gradual stopping
+  // Apply speed limit before friction
+  player.dx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.dx));
+  player.dy = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.dy));
+
+  // Apply friction to slow down gradually
   player.dx *= player.friction;
   player.dy *= player.friction;
 
-  // Prevent tiny movements when almost stopped
-  if (Math.abs(player.dx) < 0.2) player.dx = 0;
-  if (Math.abs(player.dy) < 0.2) player.dy = 0;
-
-  // Limit max speed
-  player.dx = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.dx));
-  player.dy = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.dy));
+  // Prevent tiny movement glitches
+  if (Math.abs(player.dx) < 0.3) player.dx = 0;
+  if (Math.abs(player.dy) < 0.3) player.dy = 0;
 
   // Move player
   player.x += player.dx;
   player.y += player.dy;
 
-  // Keep player within screen boundaries
+  // Keep player inside screen boundaries
   const finWidth = player.width * 0.4;
   player.x = Math.max(player.width / 2 + finWidth, Math.min(canvas.width - player.width / 2 - finWidth, player.x));
   player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
@@ -1447,33 +1447,33 @@ function drawCooldownIndicator() {
   ctx.fillRect(10, 40, 100 * Math.min(progress, 1), 10);
 }
 
-// Movement properties
-player.acceleration = 5;  // How quickly player accelerates
-player.maxSpeed = 100;       // Max speed
-player.friction = 0.85;     // Slowdown effect
+// Improved movement properties
+player.acceleration = 2;    // Stronger acceleration for quicker response
+player.maxSpeed = 12;       // Faster max speed
+player.friction = 0.92;     // Slightly reduced friction for better momentum
 
 // Handle key down (accelerate player)
 function handleKeyDown(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') {
-    player.dx += player.acceleration;
+    player.dx = Math.min(player.dx + player.acceleration, player.maxSpeed);
   } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-    player.dx -= player.acceleration;
+    player.dx = Math.max(player.dx - player.acceleration, -player.maxSpeed);
   } else if (e.key === 'ArrowUp' || e.key === 'w') {
-    player.dy -= player.acceleration;
+    player.dy = Math.max(player.dy - player.acceleration, -player.maxSpeed);
   } else if (e.key === 'ArrowDown' || e.key === 's') {
-    player.dy += player.acceleration;
+    player.dy = Math.min(player.dy + player.acceleration, player.maxSpeed);
   } else if (e.key === ' ' && projectile.canShoot) {
     shootProjectile();
   }
 }
 
-// Handle key up (apply friction)
+// Handle key up (apply friction gradually)
 function handleKeyUp(e) {
   if (['ArrowRight', 'd', 'ArrowLeft', 'a'].includes(e.key)) {
-    player.dx *= player.friction;  // Apply friction to horizontal movement
+    player.dx *= player.friction;
   }
   if (['ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) {
-    player.dy *= player.friction;  // Apply friction to vertical movement
+    player.dy *= player.friction;
   }
 }
 
