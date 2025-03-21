@@ -1448,8 +1448,8 @@ function drawCooldownIndicator() {
 }
 
 // Movement properties
-player.acceleration = 1.2;  // How quickly player accelerates
-player.maxSpeed = 10;       // Max speed
+player.acceleration = 5;  // How quickly player accelerates
+player.maxSpeed = 100;       // Max speed
 player.friction = 0.85;     // Slowdown effect
 
 // Handle key down (accelerate player)
