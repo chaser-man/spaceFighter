@@ -1457,8 +1457,8 @@ function drawCooldownIndicator() {
 }
 
 // Improved movement properties
-player.acceleration = 2;    // Even stronger acceleration for instant response
-player.maxSpeed = 11;        // Slightly increased top speed for faster movement
+player.acceleration = 1.7;    // Even stronger acceleration for instant response
+player.maxSpeed = 7;        // Slightly increased top speed for faster movement
 player.friction = 0.95;      // Reduced friction for a more natural glide
 
 // Movement keys state tracking
