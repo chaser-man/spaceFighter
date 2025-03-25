@@ -1456,34 +1456,69 @@ function drawCooldownIndicator() {
   ctx.fillRect(10, 40, 100 * Math.min(progress, 1), 10);
 }
 
-// Improved movement properties
-player.acceleration = 1.7;    // Even stronger acceleration for instant response
-player.maxSpeed = 7;        // Slightly increased top speed for faster movement
-player.friction = 0.95;      // Reduced friction for a more natural glide
+// Movement properties
+player.acceleration = 0.5;  // Gradual acceleration for smooth movement
+player.maxSpeed = 7;        // Speed limit that now actually works
+player.friction = 0.92;     // Smooth deceleration
 
-// Movement keys state tracking
+// Track active keys
 const keys = {};
 
-// Handle key down (instant acceleration)
+// Handle key down
 function handleKeyDown(e) {
   keys[e.key] = true;
-
-  if (e.key === 'ArrowRight' || e.key === 'd') {
-    player.dx = player.acceleration; // Instant push instead of gradual build-up
-  } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-    player.dx = -player.acceleration;
-  } else if (e.key === 'ArrowUp' || e.key === 'w') {
-    player.dy = -player.acceleration;
-  } else if (e.key === 'ArrowDown' || e.key === 's') {
-    player.dy = player.acceleration;
-  } else if (e.key === ' ' && projectile.canShoot) {
-    shootProjectile();
-  }
 }
 
-// Handle key up (apply smooth friction-based slowdown)
+// Handle key up
 function handleKeyUp(e) {
   keys[e.key] = false;
+}
+
+// Update player movement with proper speed control
+function updatePlayer() {
+  let moveX = 0;
+  let moveY = 0;
+
+  // Check movement keys
+  if (keys['ArrowRight'] || keys['d']) moveX += 1;
+  if (keys['ArrowLeft'] || keys['a']) moveX -= 1;
+  if (keys['ArrowUp'] || keys['w']) moveY -= 1;
+  if (keys['ArrowDown'] || keys['s']) moveY += 1;
+
+  // Normalize diagonal movement
+  if (moveX !== 0 || moveY !== 0) {
+    const magnitude = Math.sqrt(moveX * moveX + moveY * moveY);
+    moveX /= magnitude;
+    moveY /= magnitude;
+
+    // Gradually increase speed up to maxSpeed
+    player.dx += moveX * player.acceleration;
+    player.dy += moveY * player.acceleration;
+
+    // Limit speed to maxSpeed
+    const speed = Math.sqrt(player.dx * player.dx + player.dy * player.dy);
+    if (speed > player.maxSpeed) {
+      player.dx = (player.dx / speed) * player.maxSpeed;
+      player.dy = (player.dy / speed) * player.maxSpeed;
+    }
+  } else {
+    // Apply friction when no input is detected
+    player.dx *= player.friction;
+    player.dy *= player.friction;
+  }
+
+  // Prevent tiny movement jitters
+  if (Math.abs(player.dx) < 0.2) player.dx = 0;
+  if (Math.abs(player.dy) < 0.2) player.dy = 0;
+
+  // Move player
+  player.x += player.dx;
+  player.y += player.dy;
+
+  // Keep player inside screen boundaries
+  const finWidth = player.width * 0.4;
+  player.x = Math.max(player.width / 2 + finWidth, Math.min(canvas.width - player.width / 2 - finWidth, player.x));
+  player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
 }
 
 // Mobile controls
