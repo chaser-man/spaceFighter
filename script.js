@@ -1677,6 +1677,15 @@ function startGame() {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 
+  // Add this code to handle space bar shooting:
+  window.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      shootProjectile();
+    }
+  });
+
+  
   gameLoop();
 }
 startGame();
